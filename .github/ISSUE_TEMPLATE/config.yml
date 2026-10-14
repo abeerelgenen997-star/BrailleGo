@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: دليل الاستخدام · User Guide
+    url: https://github.com/abeerelgenen997-star/BrailleGo/blob/main/USER_GUIDE.md
+    about: راجع دليل الاستخدام قبل فتح مشكلة.
+  - name: أسئلة ومناقشات · Discussions
+    url: https://github.com/abeerelgenen997-star/BrailleGo/discussions
+    about: للأسئلة والمناقشات العامة.

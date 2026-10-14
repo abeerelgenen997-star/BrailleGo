@@ -1,6 +1,15 @@
 # Braille Go
 
-تطبيق سطح مكتب حقيقي تعليمي لتعلّم برايل العربي والإنجليزي للمكفوفين وضعاف البصر، مبني باستخدام Python + PySide6.
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
+[![UI: PySide6](https://img.shields.io/badge/UI-PySide6-41CD52.svg)](https://pypi.org/project/PySide6/)
+[![Tests](https://img.shields.io/badge/tests-19%20passed-brightgreen.svg)](TESTING.md)
+[![Status](https://img.shields.io/badge/status-active-success.svg)](https://github.com/abeerelgenen997-star/BrailleGo/releases)
+
+**الإصدار:** `1.0.1` · **المنصة:** Windows 10/11 · **التقنيات:** Python + PySide6
+
+تطبيق سطح مكتب حقيقي تعليمي لتعلّم برايل العربي والإنجليزي للمكفوفين وضعاف البصر، وللمبتدئين المبصرين، وللمدربين في مراكز التدريب والمؤسسات، مبني باستخدام Python + PySide6.
 
 ## الهدف
 
@@ -96,3 +105,27 @@ braille_go/
 - دعم النطق اختياري؛ إذا لم يتوفر صوت عربي، يظل التطبيق صالحًا للاستخدام.
 - عدم تغيير إعدادات النظام أو قارئ الشاشة.
 - أنظمة الأرقام وعلامات الترقيم الوثيقة فيها في [BRAILLE_DATA_SOURCES.md](BRAILLE_DATA_SOURCES.md).
+
+## التنزيل والإصدارات (Releases)
+
+يمكنك تنزيل النسخة الجاهزة للتشغيل (بدون تثبيت Python) من صفحة الإصدارات:
+
+- **أحدث إصدار:** [Releases](https://github.com/abeerelgenen997-star/BrailleGo/releases/latest)
+- افتح الملف `BrailleGo-Windows-x64.zip`، فك الضغط، ثم شغّل `BrailleGo.exe`.
+
+راجع [CHANGELOG.md](CHANGELOG.md) لمعرفة الجديد في كل إصدار.
+
+## المساهمة (Contributing)
+
+نرحّب بمساهمات المبرمجين والمعلّمين ومختصّي إمكانية الوصول. الطريقة:
+
+1. اعمل **Fork** للمستودع.
+2. أنشئ فرعًا جديدًا: `git checkout -b feature/اسم-الميزة`.
+3. نفّذ تعديلاتك، وتأكد أن الاختبارات تنجح: `python -m pytest -q`.
+4. ارفع الفرع وافتح **Pull Request**.
+
+التفاصيل الكاملة في [CONTRIBUTING.md](CONTRIBUTING.md)، ونرجو الالتزام بـ [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## الترخيص (License)
+
+هذا المشروع مُرخّص تحت **MIT License** — راجع ملف [LICENSE](LICENSE).
