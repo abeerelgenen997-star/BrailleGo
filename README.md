@@ -67,6 +67,14 @@ cd C:\Users\Hamadah\Downloads\BrailleGo
 
 سيظهر الملف التنفيذي في: `dist\BrailleGo\BrailleGo.exe`
 
+بديل موصى به (يبني ويقلّم مكوّنات Qt غير المستخدمة تلقائيًا):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File build_windows.ps1
+```
+
+يقوم `prune_build.ps1` بإزالة مكوّنات لا يستخدمها التطبيق (OpenGL البرمجي، وسائط FFmpeg، QML/Quick، الشبكة، الترجمات)، مما يقلّل الحجم بنحو 66 ميجابايت.
+
 لإنشاء مجلد إصدار جاهز، انسخ `README.md` وملفات التوثيق مع المجلد `dist\BrailleGo` إلى مجلد `release\BrailleGo-<الإصدار>\`.
 
 ## الاختبارات
@@ -111,7 +119,8 @@ braille_go/
 يمكنك تنزيل النسخة الجاهزة للتشغيل (بدون تثبيت Python) من صفحة الإصدارات:
 
 - **أحدث إصدار:** [Releases](https://github.com/abeerelgenen997-star/BrailleGo/releases/latest)
-- افتح الملف `BrailleGo-Windows-x64.zip`، فك الضغط، ثم شغّل `BrailleGo.exe`.
+- الحزمة مُقسّمة إلى أجزاء `BrailleGo-Windows-x64.zip.part01` … `part07`. نزّل **كل** الأجزاء مع `JOIN_AND_EXTRACT.ps1` إلى نفس المجلد، ثم شغّل السكربت (سيدمجها، يتحقق من SHA-256، ويفك الضغط تلقائيًا).
+- شغّل بعدها `BrailleGo\BrailleGo.exe`.
 
 راجع [CHANGELOG.md](CHANGELOG.md) لمعرفة الجديد في كل إصدار.
 

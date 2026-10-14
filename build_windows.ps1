@@ -14,6 +14,9 @@ if (-not (Test-Path $python)) {
 & $python -m PyInstaller --clean BrailleGo.spec
 
 if (Test-Path "dist\BrailleGo\BrailleGo.exe") {
+  # Trim unused Qt components to shrink the package (see prune_build.ps1)
+  & powershell -ExecutionPolicy Bypass -File prune_build.ps1 -Path "dist\BrailleGo"
+
   Write-Host "Build successful:" -ForegroundColor Green
   Write-Host "  dist\BrailleGo\BrailleGo.exe"
 } else {

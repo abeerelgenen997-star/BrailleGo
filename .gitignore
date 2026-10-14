@@ -24,6 +24,14 @@ dist/
 release/
 *.spec.bak
 
+# --- Packaged artifacts ---
+*.zip
+*.zip.part*
+*.7z
+*.tar
+*.tar.gz
+*.tar.xz
+
 # --- Test / tooling caches ---
 .pytest_cache/
 .mypy_cache/
