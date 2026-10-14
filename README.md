@@ -75,6 +75,16 @@ powershell -ExecutionPolicy Bypass -File build_windows.ps1
 
 يقوم `prune_build.ps1` بإزالة مكوّنات لا يستخدمها التطبيق (OpenGL البرمجي، وسائط FFmpeg، QML/Quick، الشبكة، الترجمات)، مما يقلّل الحجم بنحو 66 ميجابايت.
 
+### بناء ملف واحد (Standalone)
+
+لبناء ملف تنفيذي **واحد** يعمل بنقرة مزدوجة (يستبعد المكوّنات غير المستخدمة أثناء البناء):
+
+```powershell
+.\.venv\Scripts\pyinstaller --clean BrailleGo_onefile.spec
+```
+
+الناتج: `dist\BrailleGo.exe` (ملف واحد بحجم ~28 ميجابايت).
+
 لإنشاء مجلد إصدار جاهز، انسخ `README.md` وملفات التوثيق مع المجلد `dist\BrailleGo` إلى مجلد `release\BrailleGo-<الإصدار>\`.
 
 ## الاختبارات
@@ -119,8 +129,8 @@ braille_go/
 يمكنك تنزيل النسخة الجاهزة للتشغيل (بدون تثبيت Python) من صفحة الإصدارات:
 
 - **أحدث إصدار:** [Releases](https://github.com/abeerelgenen997-star/BrailleGo/releases/latest)
-- الحزمة مُقسّمة إلى أجزاء `BrailleGo-Windows-x64.zip.part01` … `part07`. نزّل **كل** الأجزاء مع `JOIN_AND_EXTRACT.ps1` إلى نفس المجلد، ثم شغّل السكربت (سيدمجها، يتحقق من SHA-256، ويفك الضغط تلقائيًا).
-- شغّل بعدها `BrailleGo\BrailleGo.exe`.
+- الحزمة **ملف واحد** مُقسّم إلى أجزاء `BrailleGo-Standalone.exe.part01` … `part07`. نزّل **كل** الأجزاء مع `JOIN_AND_RUN.ps1` إلى نفس المجلد، ثم شغّل السكربت (سيدمجها ويتحقق من SHA-256) فينتج ملف واحد `BrailleGo.exe`.
+- شغّل `BrailleGo.exe` بنقرة مزدوجة.
 
 راجع [CHANGELOG.md](CHANGELOG.md) لمعرفة الجديد في كل إصدار.
 
