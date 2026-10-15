@@ -10,13 +10,12 @@ produces a human readable Arabic explanation.
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
 from typing import Iterable, Sequence
 
 from . import braille_text as bt
 from . import i18n as _i18n
-from .braille import BrailleCell, cells_to_unicode, differing_dots
+from .braille import BrailleCell, differing_dots
 from .curriculum import Lesson, _SIMILAR_PAIRS  # noqa: F401  (pairs reused by review)
 from .exercise_types import AnswerMode, ExerciseKind
 from .symbols import BrailleSymbol, SymbolCategory, SymbolRepository, build_default_repository
@@ -639,7 +638,6 @@ def grade(exercise: Exercise, response: object, repository: SymbolRepository | N
     ``response`` can be a string, a :class:`BrailleCell`, an iterable of dots or
     a sequence of cells, depending on ``exercise.answer_mode``.
     """
-    repo = repository or build_default_repository()
     mode = exercise.answer_mode
 
     if mode is AnswerMode.CHOOSE_TEXT:

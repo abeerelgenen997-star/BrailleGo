@@ -2,12 +2,12 @@
 
 ## نظرة عامة
 
-تم تنفيذ اختبارات آلية لوحدات Core الأساسية باستخدام pytest. اختبارات UI محدودة عبر pytest-qt (حيثما أمكن بدون تعقيد زائد).
+تم تنفيذ اختبارات آلية لوحدات Core الأساسية باستخدام pytest، إضافة إلى اختبارات دخانية لواجهة wxPython (تُشغَّل حيثما توفّر `wx`).
 
 ## بيئة الاختبار
 
 - Python 3.14.7
-- pytest 8.4.2, pytest-qt 4.5.0
+- pytest 8.4.2
 - wxPython 4.3.2 (اختبارات الواجهة الأساسية) + PySide6 6.12.0 (احتياطي)
 - pyttsx3 2.99 + comtypes 1.4.17
 - OS: Windows 11 (بيئة التطوير الحالية)
@@ -74,5 +74,4 @@ cd C:\Users\Hamadah\Downloads\BrailleGo
 - اختبار تصحيح `CHOOSE_PATTERN`, `TYPE_TEXT`, `BUILD_WORD`
 - اختبار `braille_text.transcribe()` مع تشكيل عربي وشدة
 - اختبار `curriculum` يولّد جميع الدروس بدون فجوات
-- اختبار `app_context.snapshot()` كاملًا
-- اختبار smoke لـMainWindow عبر pytest-qt
+- توسيع اختبارات الدخان لواجهة wx لتغطية بقية الشاشات مع تفاعل لوحة المفاتيح

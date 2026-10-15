@@ -77,12 +77,6 @@ cd C:\Users\Hamadah\Downloads\BrailleGo
 .\.venv\Scripts\python.exe -m braille_wx
 ```
 
-النسخة الاحتياطية بواجهة Qt (PySide6) ما زالت متاحة:
-
-```powershell
-.\.venv\Scripts\python.exe run_qt.py
-```
-
 ## بناء الملف التنفيذي (PyInstaller)
 
 ### ملف تنفيذي واحد (Standalone)
@@ -116,8 +110,6 @@ powershell -ExecutionPolicy Bypass -File build_wx.ps1 -Version 1.4.0 -Installer
 
 الناتج: `dist\installer\BrailleGo-Setup-1.4.0.exe`.
 
-> نسخة Qt القديمة: `BrailleGo.spec` و`BrailleGo_onefile.spec` (تعتمدان `run_qt.py`).
-
 ## الاختبارات
 
 ```powershell
@@ -133,9 +125,6 @@ cd C:\Users\Hamadah\Downloads\BrailleGo
 braille_go/            # طبقة مشتركة (منطق + بيانات) لا تعتمد على الواجهة
   core/                # منطق برايل، منهج، تدريبات، تقدّم، i18n
   data/                # SQLite + إعدادات + تخزين التقدّم + المستخدمون
-  services/            # خدمة الصوت/النطق
-  ui/                  # واجهة PySide6 (نسخة احتياطية)
-  app.py, app_context.py
 braille_wx/            # الواجهة الأساسية (wxPython)
   app.py, __main__.py  # نقطة الدخول
   main_frame.py        # النافذة الرئيسية والقوائم والمختصرات والتنقّل
@@ -145,8 +134,7 @@ braille_wx/            # الواجهة الأساسية (wxPython)
   theme.py             # وضعيات العرض والألوان
   speech.py, sounds.py # النطق وأصوات التطبيق
   a11y.py, widgets.py  # مساعدات إمكانية الوصول والعناصر
-run.py                 # تشغيل wx (الأساسي)
-run_qt.py              # تشغيل Qt (احتياطي)
+run.py                 # نقطة التشغيل (wxPython)
 installer/BrailleGo.iss
 BrailleGo_wx_onefile.spec
 ```

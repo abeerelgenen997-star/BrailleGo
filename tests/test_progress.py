@@ -1,8 +1,5 @@
 """اختبارات قواعد التقدّم والإتقان."""
 
-import tempfile
-from pathlib import Path
-
 from braille_go.core import progress, curriculum
 from braille_go.data import db, progress_store
 
@@ -29,7 +26,7 @@ def test_evaluate_level():
 def test_can_advance_false():
     lvl = curriculum.LEVELS[0]
     results = {}
-    ev = progress.evaluate_level(lvl, results, threshold=85.0)
+    progress.evaluate_level(lvl, results, threshold=85.0)
     can, reason = progress.can_advance(lvl, results, threshold=85.0)
     assert not can
 
@@ -70,7 +67,7 @@ def test_progress_store_save_session(tmp_path):
     for ex in exs:
         fb = exercises.grade(ex, ex.correct_dots, repo)
         res.append((ex, fb))
-    out = store.save_session(l, "level_intro", res, threshold=85.0)
+    store.save_session(l, "level_intro", res, threshold=85.0)
     snap = store.lesson_result(l.key)
     assert snap is not None
     d.close()

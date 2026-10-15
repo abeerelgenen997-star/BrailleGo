@@ -7,11 +7,5 @@ wxPython==4.3.2
 pyttsx3==2.99
 comtypes==1.4.17
 
-# ملاحظة: للنسخة الاحتياطية بواجهة Qt ثبّت أيضًا:
-#   PySide6-Essentials==6.12.0
-#   PySide6-Addons==6.12.0
-PySide6-Essentials==6.12.0
-PySide6-Addons==6.12.0
-
 # أدوات البناء
 pyinstaller==6.16.0

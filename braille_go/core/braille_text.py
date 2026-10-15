@@ -22,7 +22,7 @@ instead of raising, so the UI never crashes on odd user input.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .braille import BrailleCell, cells_to_unicode
 from .braille_alphabet_ar import ARABIC_ALL_LETTERS
@@ -76,7 +76,6 @@ class TranscriptionResult:
 
 def build_char_map(language: str, repository: SymbolRepository | None = None) -> dict[str, str]:
     """Return a ``{printed char: dot string}`` mapping for one language."""
-    repo = repository or build_default_repository()
     mapping: dict[str, str] = {}
     if language == "ar":
         for entry in ARABIC_ALL_LETTERS:

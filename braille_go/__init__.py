@@ -7,8 +7,9 @@ The package is organised as follows::
 
     braille_go.core       # منطق برايل، المحتوى التعليمي، التدريبات، التقدّم
     braille_go.data       # قاعدة البيانات المحلية والإعدادات
-    braille_go.services   # الصوت وإمكانية الوصول
-    braille_go.ui         # الواجهة الرسومية (PySide6)
+
+الواجهة الرسومية في حزمة منفصلة ``braille_wx`` (wxPython) تعيد استخدام
+``braille_go.core`` و``braille_go.data`` دون أي اعتماد على مكتبة الواجهة.
 """
 
 __all__ = ["__app_name__", "__version__"]

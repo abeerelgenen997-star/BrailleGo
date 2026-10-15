@@ -1,6 +1,6 @@
 """اختبارات تحويل برايل والنصوص."""
 
-from braille_go.core import braille, braille_text, symbols
+from braille_go.core import braille, braille_text
 
 
 def test_braille_cell_basic():

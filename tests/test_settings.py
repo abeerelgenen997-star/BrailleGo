@@ -1,7 +1,5 @@
 """اختبارات الإعدادات."""
 
-from pathlib import Path
-
 from braille_go.data import db, settings
 
 

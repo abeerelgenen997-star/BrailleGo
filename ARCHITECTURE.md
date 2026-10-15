@@ -4,12 +4,12 @@
 
 Braille Go هو تطبيق سطح مكتب منفصل الطبقات (layers):
 
-- Presentation (UI): الافتراضي **wxPython** (`braille_wx/`) + نسخة احتياطية PySide6 (`braille_go/ui/`)
-- Services: النطق والأصوات (`braille_wx/speech.py`, `sounds.py`) و/أو `braille_go/services`
+- Presentation (UI): **wxPython** (`braille_wx/`) — الواجهة الوحيدة
+- Services: النطق والأصوات (`braille_wx/speech.py`, `sounds.py`)
 - Domain (Core): Braille model, Symbols, Curriculum, Exercises, Progress rules
 - Data: SQLite (settings, progress, state, users) مع WAL ومعاملة واحدة
 
-> ملاحظة: طبقتا **Core** و**Data** مشتركتان تمامًا بين الواجهتين (wx وQt) دون أي اعتماد على مكتبة الواجهة.
+> ملاحظة: طبقتا **Core** و**Data** لا تعتمدان إطلاقًا على مكتبة الواجهة، فيمكن إعادة استخدامهما مع أي واجهة أخرى.
 
 ## الدوائر الأساسية
 
@@ -22,15 +22,11 @@ Braille Go هو تطبيق سطح مكتب منفصل الطبقات (layers):
 - `data/db.py`: SCHEMA_VERSION 1، WAL، معاملات، quarantine للقاعدة التالفة، `backup_to`.
 - `data/settings.py`: Settings + backend (SQLite/Memory)، coerce + bounds.
 - `data/progress_store.py`: حفظ جلسة كاملة في معاملة + `record_answer`/`finalize_session` للحفظ التدريجي.
-- `app_context.py`: يربط كل الخدمات + إشارات Qt (`settings_changed`, `progress_changed`).
-- `ui/braille_cell_widget.py`: رسم مخصص + أحداث لوحة مفاتيح (1-6, arrows, space, enter, clear) + وصف وصولي حي.
-- `ui/theme.py`: ثيم + palette + stylesheet + ألوان قابلة للتخصيص.
-- `ui/screens/*`: شاشة لكل ميزة (Home, Lessons, Lesson, Practice, Exams, Review, Progress, Settings, Help).
 
 ## طبقة wxPython (الواجهة الأساسية) — `braille_wx/`
 
 - `app.py`, `__main__.py`: نقطة الدخول (تُنشئ `wx.App` و`MainFrame`).
-- `context.py`: `WxAppContext` يربط Core+Data ويوفّر إشارات (`Signal`) بدل إشارات Qt + مساعدات (توليد تدريبات، تصحيح، ملخّصات تقدّم).
+- `context.py`: `WxAppContext` يربط Core+Data ويوفّر إشارات (`Signal`) + مساعدات (توليد تدريبات، تصحيح، ملخّصات تقدّم).
 - `main_frame.py`: النافذة الرئيسية، القوائم، جدول الاختصارات، شريط الحالة، تنقّل الشاشات، تبديل الثيم واللغة.
 - `screens.py`: كل الشاشات (ترحيب، رئيسية أنيقة، دروس، تدريب، **تطابق الحرف**، **تحديد المستوى**، اختبارات، مراجعة، تقدّم، إعدادات، مدرب، مساعدة + **دليل برايل**، اختصارات).
 - `lesson_view.py`: شاشة الدرس/الاختبار/المراجعة/التطابق/تحديد المستوى + **صندوق السؤال القابل للقراءة** و**حقل الإجابة** وباني الخلايا المتعددة.
@@ -51,7 +47,7 @@ Braille Go هو تطبيق سطح مكتب منفصل الطبقات (layers):
 
 ## ملاحظات التصميم
 
-- فصل تام بين Core وUI (Core لا يستورد PySide6)
+- فصل تام بين Core وUI (Core لا يعتمد على أي مكتبة واجهة)
 - استثناءات برمجية تُحوّل لرسائل عربية (`SettingsError`, `DatabaseError`, `BrailleError`)
 - Speech اختياري: NullSpeechService عند عدم التوفر
 - إمكانية الوصول: أسماء واضحة، مناطق حيّة، إعلانات غير مُحوّلة للتركيز

@@ -8,7 +8,7 @@ unexpectedly.  It exposes plain data objects from
 
 from __future__ import annotations
 
-from typing import Iterable, Sequence
+from typing import Sequence
 
 from ..core.curriculum import Lesson
 from ..core.exercises import Exercise, Feedback
@@ -17,7 +17,7 @@ from ..core.progress import (
     LessonResult,
     SymbolStat,
 )
-from .db import Database, DatabaseError, utc_now
+from .db import Database, utc_now
 
 
 class ProgressStore:

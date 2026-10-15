@@ -1,7 +1,7 @@
 """نقطة التشغيل الرئيسية لـ Braille Go (واجهة wxPython).
 
 اختيار wxPython يجعل التطبيق متوافقًا مع قارئات الشاشة (NVDA، Narrator، JAWS)
-على Windows. لتشغيل نسخة Qt الاحتياطية استخدم ``python run_qt.py``.
+على Windows، لأن عناصره عناصر Windows أصلية (Win32).
 """
 
 from braille_wx.app import main
