@@ -671,6 +671,167 @@ LESSONS_BY_KEY: dict[str, Lesson] = {
     lesson.key: lesson for level in LEVELS for lesson in level.lessons
 }
 
+# ----------------------------------------------------------------------
+# الترجمة الإنجليزية للمستويات والدروس
+# ----------------------------------------------------------------------
+# الواجهة تدعم العربية والإنجليزية والفرنسية والإسبانية، ولأن عناوين المنهج
+# مُعرّفة بالعربية داخل البيانات نضيف هنا الترجمة الإنجليزية لكل مستوى ودرس،
+# وتُستخدم الإنجليزية بديلًا للفرنسية والإسبانية حتى تكتمل ترجمتها لاحقًا.
+# اختبار الوحدة يتحقّق من وجود ترجمة إنجليزية لكل مفتاح حتى لا تتسرّب عناوين
+# عربية إلى واجهة غير عربية.
+
+_LEVEL_TITLES_EN: dict[str, str] = {
+    "level_intro": "Level 1: Introduction to Braille",
+    "level_ar_1": "Level 2: Arabic Letters (Group 1)",
+    "level_ar_2": "Level 3: The Rest of the Arabic Letters",
+    "level_en": "Level 4: English Letters",
+    "level_digits": "Level 5: Numbers",
+    "level_punctuation": "Level 6: Punctuation",
+    "level_diacritics": "Level 7: Arabic Diacritics",
+    "level_symbols": "Level 8: Common Signs and Symbols",
+    "level_words": "Level 9: Building Words",
+    "level_sentences": "Level 10: Reading Words and Sentences",
+    "level_discrimination": "Level 11: Telling Similar Symbols Apart",
+}
+
+_LEVEL_DESCRIPTIONS_EN: dict[str, str] = {
+    "level_intro": "Get to know braille, the six-dot cell and the order of the dots.",
+    "level_ar_1": "Learn ten basic Arabic letters and tell them apart.",
+    "level_ar_2": "Complete the Arabic letters, the hamzas and the common ligatures.",
+    "level_en": "Learn the English letters (Grade 1) and the capital sign.",
+    "level_digits": "Learn the numbers, the number sign and how they are written.",
+    "level_punctuation": "Learn Arabic and English punctuation and their positions.",
+    "level_diacritics": "Learn the short vowels, the shadda and the sukun and their positions in braille.",
+    "level_symbols": "Learn the number sign, the capital sign, the abbreviation and the space signs.",
+    "level_words": "Build Arabic and English words using braille cells.",
+    "level_sentences": "Read full sentences written in braille and understand their meaning.",
+    "level_discrimination": "Practise telling apart symbols that are easy to confuse.",
+}
+
+_LESSON_TITLES_EN: dict[str, str] = {
+    # المستوى 1
+    "l1_what_is_braille": "What is Braille?",
+    "l1_cell_layout": "The Braille Cell and the Order of the Dots",
+    "l1_dot_practice": "Dot Identification Practice",
+    "l1_exam": "Level 1 Exam",
+    # المستوى 2
+    "l2_letters_a": "Letters: alif, ba, ta, tha, jeem",
+    "l2_letters_b": "Letters: hha, kha, dal, thal, ra",
+    "l2_review": "Review of the Ten Letters",
+    "l2_exam": "Level 2 Exam",
+    # المستوى 3
+    "l3_letters_a": "Letters: zay, seen, sheen, sad, dad",
+    "l3_letters_b": "Letters: taa, zha, ain, ghain, fa",
+    "l3_letters_c": "Letters: qaf, kaf, lam, meem, noon, ha, waw, ya",
+    "l3_extended": "Alif Maqsura, Hamzas and Ligatures",
+    "l3_exam": "Level 3 Exam",
+    # المستوى 4
+    "l4_en_a": "English Letters: a–i",
+    "l4_en_b": "English Letters: j–r",
+    "l4_en_c": "English Letters: s–z",
+    "l4_en_caps": "The Capital Sign",
+    "l4_exam": "Level 4 Exam",
+    # المستوى 5
+    "l5_digits_sign": "The Number Sign and Digits 1–5",
+    "l5_digits_b": "Digits 6–9 and Zero",
+    "l5_exam": "Level 5 Exam",
+    # المستوى 6
+    "l6_punct_ar": "Common Arabic Punctuation",
+    "l6_punct_en": "English Punctuation",
+    "l6_punct_marks": "Brackets and Quotation Marks",
+    "l6_exam": "Level 6 Exam",
+    # المستوى 7
+    "l7_harakat": "Fatha, Damma and Kasra",
+    "l7_tanween": "Tanween (Double Vowels)",
+    "l7_sukun_shadda": "Sukun and Shadda",
+    "l7_exam": "Level 7 Exam",
+    # المستوى 8
+    "l8_marks": "Number, Capital and Emphasis Signs",
+    "l8_other": "Other Symbols",
+    "l8_exam": "Level 8 Exam",
+    # المستوى 9
+    "l9_words_ar": "Building Arabic Words",
+    "l9_words_en": "Building English Words",
+    "l9_exam": "Level 9 Exam",
+    # المستوى 10
+    "l10_sentences_ar": "Reading Arabic Sentences",
+    "l10_sentences_en": "Reading English Sentences",
+    "l10_exam": "Level 10 Exam",
+    # المستوى 11
+    "l11_similar_ar": "Similar Arabic Symbols",
+    "l11_similar_marks": "Similar Signs",
+    "l11_exam": "Final Comprehensive Exam",
+}
+
+_LESSON_DESCRIPTIONS_EN: dict[str, str] = {
+    "l1_what_is_braille": "A simple idea of braille and how it is read through raised dots.",
+    "l1_cell_layout": "Learn the positions of the six dots inside the cell.",
+    "l1_dot_practice": "Practise recognising and selecting dot positions.",
+    "l1_exam": "A short exam on the cell and dot concepts.",
+    "l2_letters_a": "The first five Arabic letters in braille.",
+    "l2_letters_b": "Five new letters with a review of the previous ones.",
+    "l2_review": "A comprehensive practice on the first group.",
+    "l2_exam": "An exam on the Arabic letters of the first group.",
+    "l4_en_caps": "Learn the capital sign ⠠ and its position.",
+    "l6_punct_marks": "Learn the difference between the punctuation systems.",
+    "l11_exam": "A comprehensive exam combining letters, numbers, punctuation and symbols.",
+}
+
+_LESSON_INTROS_EN: dict[str, str] = {
+    "l1_what_is_braille": (
+        "Braille is a reading and writing system based on raised dots that you "
+        "feel with your fingertips. Braille is read from left to right, and its "
+        "basic unit is a cell of six dots arranged in two columns and three "
+        "rows:\nDot 1 and dot 4 at the top, then 2 and 5 in the middle, then 3 "
+        "and 6 at the bottom.\nEvery letter, number or sign is a different "
+        "combination of these six dots."
+    ),
+    "l1_cell_layout": (
+        "The right column of the cell holds dots 4, 5 and 6, and the left "
+        "column holds dots 1, 2 and 3. When we name dots we always list them in "
+        "ascending order: 1, then 2, then 3, then 4, then 5, then 6."
+    ),
+}
+
+
+def level_title(level: Level, language: str = "ar") -> str:
+    """عنوان المستوى بحسب لغة الواجهة (الإنجليزية بديلًا لغير العربية)."""
+    if language == "ar":
+        return level.title_ar
+    return _LEVEL_TITLES_EN.get(level.key, level.title_ar)
+
+
+def level_description(level: Level, language: str = "ar") -> str:
+    """وصف المستوى بحسب لغة الواجهة."""
+    if language == "ar":
+        return level.description_ar
+    return _LEVEL_DESCRIPTIONS_EN.get(level.key, level.description_ar or level.title_ar)
+
+
+def lesson_title(lesson: Lesson, language: str = "ar") -> str:
+    """عنوان الدرس بحسب لغة الواجهة."""
+    if language == "ar":
+        return lesson.title_ar
+    return _LESSON_TITLES_EN.get(lesson.key, lesson.title_ar)
+
+
+def lesson_description(lesson: Lesson, language: str = "ar") -> str:
+    """وصف الدرس بحسب لغة الواجهة."""
+    if language == "ar":
+        return lesson.description_ar
+    return (
+        _LESSON_DESCRIPTIONS_EN.get(lesson.key)
+        or lesson.description_ar
+        or _LESSON_TITLES_EN.get(lesson.key, lesson.title_ar)
+    )
+
+
+def lesson_intro(lesson: Lesson, language: str = "ar") -> str:
+    """المقدمة التعليمية للدرس بحسب لغة الواجهة."""
+    if language == "ar":
+        return lesson.intro_ar
+    return _LESSON_INTROS_EN.get(lesson.key, lesson.intro_ar)
+
 
 def level_of_lesson(lesson_key: str) -> Level | None:
     """أعد المستوى الذي ينتمي إليه الدرس."""

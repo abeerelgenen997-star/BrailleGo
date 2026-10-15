@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import wx
 
-from braille_go.core.curriculum import LEVELS_BY_KEY, LESSONS_BY_KEY, level_of_lesson
+from braille_go.core.curriculum import LEVELS, LEVELS_BY_KEY, LESSONS_BY_KEY, Lesson, level_of_lesson
 from braille_go.core.exercises import AnswerMode
 
+from . import i18n
 from .a11y import announce
 from .base_panel import BasePanel, clear_sizer
 from .braille_cell import BrailleCellInput, BrailleCellsView
@@ -30,6 +31,8 @@ class LessonPanel(BasePanel):
         self._index = 0
         self._results: list = []
         self._mode = ""
+        self._match_lang = "ar"
+        self._placement_note = ""
         self._answered = False
         self._finished = False
 
@@ -45,6 +48,7 @@ class LessonPanel(BasePanel):
         self._answer_box: wx.TextCtrl | None = None
         self._cells: list[BrailleCellInput] = []
         self._cells_panel: wx.Panel | None = None
+        self._option_buttons: list[wx.Button] = []
         self._btn_clear: wx.Button | None = None
         self._btn_confirm: wx.Button | None = None
         self._btn_next: wx.Button | None = None
@@ -59,29 +63,29 @@ class LessonPanel(BasePanel):
         clear_sizer(self.content)
         theme = self.theme
 
-        self._title = W.heading(self, "درس", theme)
+        self._title = W.heading(self, i18n.t("lesson_label"), theme)
         self.content.Add(self._title, 0, wx.ALL, 8)
 
         self._banner = wx.StaticText(self, label="")
-        self._banner.SetName("شريط الحالة")
+        self._banner.SetName(i18n.t("status_bar"))
         self.content.Add(self._banner, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 
         self._intro = W.wrapped_text(self, "")
         self.content.Add(self._intro, 0, wx.EXPAND | wx.ALL, 10)
 
         # صندوق السؤال (Edit Box قابل للقراءة الكاملة) -----------------
-        qbox, qsizer = W.card(self, self.content, "نص السؤال (قابل للقراءة بقارئ الشاشة)")
-        self._question_box = W.read_only_box(qbox, multiline=True, height=90, name="نص السؤال")
+        qbox, qsizer = W.card(self, self.content, i18n.t("question_card"))
+        self._question_box = W.read_only_box(qbox, multiline=True, height=90, name=i18n.t("question_card"))
         qsizer.Add(self._question_box, 1, wx.EXPAND | wx.ALL, 4)
-        hint = W.body(qbox, "للرجوع إلى هذا الحقل في أي وقت اضغط Ctrl+E.")
+        hint = W.body(qbox, i18n.t("question_hint"))
         qsizer.Add(hint, 0, wx.ALL, 4)
 
         # المحفّز (نمط برايل للقراءة) ----------------------------------
-        sbox, ssizer = W.card(self, self.content, "المطلوب قراءته")
+        sbox, ssizer = W.card(self, self.content, i18n.t("stimulus_card"))
         self._stimulus_view = BrailleCellsView(sbox, scale=self.theme.cell_scale(), theme=theme)
         ssizer.Add(self._stimulus_view, 0, wx.ALL | wx.ALIGN_CENTER, 6)
         self._braille_label = wx.StaticText(sbox, label="")
-        self._braille_label.SetName("نمط برايل كنص")
+        self._braille_label.SetName(i18n.t("braille_plain"))
         self._braille_label._keep_font = True
         try:
             self._braille_label.SetFont(theme.make_braille_font(30.0))
@@ -96,8 +100,8 @@ class LessonPanel(BasePanel):
         self.content.Add(self._options_panel, 0, wx.EXPAND | wx.ALL, 8)
 
         # حقل إدخال الإجابة (Edit Box) --------------------------------
-        abox, asizer = W.card(self, self.content, "حقل إدخال الإجابة")
-        self._answer_box = W.editable_box(abox, name="حقل إدخال الإجابة", on_enter=self._on_confirm)
+        abox, asizer = W.card(self, self.content, i18n.t("answer_card"))
+        self._answer_box = W.editable_box(abox, name=i18n.t("answer_card"), on_enter=self._on_confirm)
         asizer.Add(self._answer_box, 0, wx.EXPAND | wx.ALL, 4)
         self._answer_box.Hide()
 
@@ -113,9 +117,9 @@ class LessonPanel(BasePanel):
 
         # شريط الأزرار -------------------------------------------------
         buttons = wx.BoxSizer(wx.HORIZONTAL)
-        self._btn_clear = W.action_button(self, "مسح النقاط", on_click=self._clear, tooltip="Ctrl+Delete")
-        self._btn_confirm = W.action_button(self, "تأكيد الإجابة", on_click=self._on_confirm, primary=True, tooltip="Enter")
-        self._btn_next = W.action_button(self, "السؤال التالي", on_click=self._next, tooltip="Ctrl+N")
+        self._btn_clear = W.action_button(self, i18n.t("btn_clear"), on_click=self._clear, tooltip="Ctrl+Delete")
+        self._btn_confirm = W.action_button(self, i18n.t("btn_confirm"), on_click=self._on_confirm, primary=True, tooltip="Enter")
+        self._btn_next = W.action_button(self, i18n.t("btn_next"), on_click=self._next, tooltip="Ctrl+N")
         self._btn_next.Hide()
         buttons.Add(self._btn_clear, 0, wx.RIGHT, 8)
         buttons.Add(self._btn_confirm, 0, wx.RIGHT, 8)
@@ -124,8 +128,8 @@ class LessonPanel(BasePanel):
         self.content.Add(buttons, 0, wx.EXPAND | wx.ALL, 8)
 
         # التغذية الراجعة ----------------------------------------------
-        fbox, fsizer = W.card(self, self.content, "نتيجة الإجابة")
-        self._feedback_box = W.read_only_box(fbox, multiline=True, height=110, name="نتيجة الإجابة")
+        fbox, fsizer = W.card(self, self.content, i18n.t("feedback_card"))
+        self._feedback_box = W.read_only_box(fbox, multiline=True, height=110, name=i18n.t("feedback_card"))
         fsizer.Add(self._feedback_box, 1, wx.EXPAND | wx.ALL, 4)
         self._feedback_box.Hide()
 
@@ -141,6 +145,8 @@ class LessonPanel(BasePanel):
         lesson_key = kwargs.get("lesson_key", "")
         level_key = kwargs.get("level_key", "")
         self._mode = kwargs.get("mode", "")
+        self._match_lang = kwargs.get("match_lang", "ar")
+        self._placement_note = ""
         self._lesson = LESSONS_BY_KEY.get(lesson_key)
         self._level = LEVELS_BY_KEY.get(level_key) or level_of_lesson(lesson_key)
         self._exercises = []
@@ -151,7 +157,7 @@ class LessonPanel(BasePanel):
         self._show_feedback("")
         self._end_text.SetLabel("")
         self._banner.SetLabel("")
-        self._btn_next.SetLabel("السؤال التالي")
+        self._btn_next.SetLabel(i18n.t("btn_next"))
         self._btn_next.Hide()
         self._btn_confirm.Enable(True)
         self._btn_clear.Enable(True)
@@ -159,14 +165,29 @@ class LessonPanel(BasePanel):
             self._answer_box.SetValue("")
             self._answer_box.Enable(True)
 
-        if not self._lesson:
-            self._intro.SetLabel("درس غير معروف.")
-            return
-        self._title.SetLabel(self._lesson.title_ar)
-        self._title.SetName(self._lesson.title_ar)
-        self._intro.SetLabel(self._lesson.description_ar or self._lesson.intro_ar or "")
+        # وضع التطابق ووضع تحديد المستوى قد لا يعتمدان على درسٍ محدّد.
+        if self._mode == "matching":
+            self._lesson = Lesson(
+                key="matching",
+                title_ar=i18n.t("match_title"),
+                description_ar=i18n.t("match_intro"),
+                language=self._match_lang,
+            )
 
-        if self._mode == "review":
+        if not self._lesson:
+            self._intro.SetLabel(i18n.t("unknown_lesson"))
+            return
+        self._title.SetLabel(i18n.lesson_title(self._lesson))
+        self._title.SetName(i18n.lesson_title(self._lesson))
+        self._intro.SetLabel(
+            i18n.lesson_intro(self._lesson) or i18n.lesson_description(self._lesson) or ""
+        )
+
+        if self._mode == "matching":
+            self._exercises = self.context.generator.generate_matching(count=8, language=self._match_lang)
+        elif self._mode == "placement":
+            self._exercises = self._build_placement()
+        elif self._mode == "review":
             keys = self.context.needs_review_symbols(limit=10)
             if not keys:
                 # لا توجد أخطاء مسجّلة بعد: نراجع رموز أول درس متاح.
@@ -178,7 +199,7 @@ class LessonPanel(BasePanel):
             self._exercises = self.context.generate_exercises(self._lesson, count=self._lesson.exercise_count)
 
         if not self._exercises:
-            message = "لا يمكن توليد تدريبات لهذا الدرس في الوقت الحالي. جرّب درسًا آخر."
+            message = i18n.t("no_exercises")
             self._end_text.SetLabel(message)
             self._question_box.SetValue(message)
             self._question_box.SetFocus()
@@ -187,6 +208,59 @@ class LessonPanel(BasePanel):
             return
         self._show_current()
         self.finish_layout()
+
+    def _build_placement(self) -> list:
+        """ولّد أسئلة موزّعة على المستويات لتقدير مستوى المتعلّم."""
+        exercises: list = []
+        seen: set[str] = set()
+        for level in LEVELS:
+            for lesson in level.lessons[:2]:
+                try:
+                    generated = self.context.generate_exercises(lesson, count=2)
+                except Exception:
+                    generated = []
+                for exercise in generated:
+                    if exercise.key in seen:
+                        continue
+                    seen.add(exercise.key)
+                    exercises.append(exercise)
+            if len(exercises) >= 10:
+                break
+        return exercises[:10]
+
+    def _report_placement(self) -> None:
+        """اقترح مستوى البداية وفق نتائج اختبار تحديد المستوى واضبطه."""
+        totals: dict[str, int] = {}
+        rights: dict[str, int] = {}
+        for exercise, feedback in self._results:
+            level = level_of_lesson(exercise.lesson_key)
+            if level is None:
+                continue
+            totals[level.key] = totals.get(level.key, 0) + 1
+            if feedback.correct:
+                rights[level.key] = rights.get(level.key, 0) + 1
+        recommended = None
+        for level in LEVELS:
+            if not totals.get(level.key):
+                continue
+            if rights.get(level.key, 0) / totals[level.key] >= 0.6:
+                recommended = level
+            else:
+                break
+        if recommended is None and LEVELS:
+            recommended = LEVELS[0]
+        if recommended is not None and recommended.lessons:
+            lesson = recommended.lessons[0]
+            try:
+                self.context.set_current_position(recommended.key, lesson.key)
+            except Exception:
+                pass
+            self._placement_note = (
+                i18n.t("placement_recommend").format(level=f"{recommended.number}. {i18n.level_title(recommended)}")
+                + " " + i18n.t("placement_sets")
+            )
+        else:
+            self._placement_note = i18n.t("placement_none")
 
     # ------------------------------------------------------------------
     # العرض
@@ -201,10 +275,10 @@ class LessonPanel(BasePanel):
         # صندوق السؤال: النص الكامل الذي يقرأه قارئ الشاشة.
         question_text = ex.prompt_ar
         if ex.show_target_text and ex.stimulus_text:
-            question_text += "\nالمطلوب: " + ex.stimulus_text
+            question_text += "\n" + i18n.t("required_prefix") + ex.stimulus_text
         if self._question_box is not None:
             self._question_box.SetValue(question_text)
-            self._question_box.SetName("نص السؤال: " + ex.prompt_ar)
+            self._question_box.SetName(i18n.t("question_name_prefix") + ex.prompt_ar)
 
         # المحفّز.
         if ex.stimulus_braille:
@@ -223,13 +297,15 @@ class LessonPanel(BasePanel):
             self._answer_box.Hide()
 
         if ex.answer_mode in (AnswerMode.CHOOSE_TEXT, AnswerMode.CHOOSE_PATTERN):
+            self._option_buttons = []
             for i, opt in enumerate(ex.options):
                 label = ex.option_labels[i] if ex.option_labels and i < len(ex.option_labels) else opt
                 button = W.action_button(
                     self._options_panel, label,
                     on_click=lambda idx=i: self._choose_option(idx),
-                    name=f"خيار {i + 1}: {label}",
+                    name=i18n.t("option_prefix").format(n=i + 1, label=label),
                 )
+                self._option_buttons.append(button)
                 self._options_sizer.Add(button, 0, wx.EXPAND | wx.ALL, 3)
             self._options_panel.Show()
             self._options_panel.Layout()
@@ -252,6 +328,12 @@ class LessonPanel(BasePanel):
         self._btn_clear.Enable(True)
         self._banner.SetLabel("")
 
+        # نغمة لافتة للانتباه تُعلن بدء سؤال جديد (مفيدة للطفل الكفيف).
+        try:
+            if bool(self.context.settings.get("encouragement_enabled", True)) and self._mode != "exam":
+                self.context.sounds.attention()
+        except Exception:
+            pass
         self.context.speak_guidance(ex.speak_prompt(), ex.language)
         self._announce_target(ex)
 
@@ -306,9 +388,9 @@ class LessonPanel(BasePanel):
         spoken = feedback.spoken
         if encourage:
             if feedback.correct:
-                spoken = ("أحسنت! " if ex.language != "en" else "Well done! ") + spoken
+                spoken = i18n.t("praise_correct") + spoken
             else:
-                spoken = ("لا بأس، " if ex.language != "en" else "No worries, ") + spoken
+                spoken = i18n.t("praise_wrong") + spoken
         self.context.speak(spoken, ex.language)
 
     def _focus_initial(self) -> None:
@@ -325,7 +407,7 @@ class LessonPanel(BasePanel):
         sizer = self._cells_panel.GetSizer()
         for i in range(count):
             column = wx.BoxSizer(wx.VERTICAL)
-            caption = W.body(self._cells_panel, f"الخلية {i + 1}")
+            caption = W.body(self._cells_panel, i18n.t("cell_caption").format(n=i + 1))
             cell = BrailleCellInput(self._cells_panel, scale=self.theme.cell_scale(), theme=self.theme)
             cell.on_confirm = self._on_confirm
             self._cells.append(cell)
@@ -348,6 +430,7 @@ class LessonPanel(BasePanel):
     def _clear_options(self) -> None:
         if self._options_sizer is not None:
             clear_sizer(self._options_sizer)
+        self._option_buttons = []
 
     # ------------------------------------------------------------------
     # الإجابة
@@ -372,8 +455,8 @@ class LessonPanel(BasePanel):
         if mode is AnswerMode.TYPE_TEXT:
             response = self._answer_box.GetValue() if self._answer_box is not None else ""
             if not response.strip():
-                self._banner.SetLabel("اكتب إجابة في الحقل ثم اضغط مفتاح الإدخال (Enter) للتأكيد.")
-                announce(self, "اكتب إجابة أولًا.")
+                self._banner.SetLabel(i18n.t("write_answer_hint"))
+                announce(self, i18n.t("write_answer_announce"))
                 return
         elif mode is AnswerMode.BUILD_CELLS:
             response = [cell.dots() for cell in self._cells]
@@ -405,7 +488,7 @@ class LessonPanel(BasePanel):
         if feedback.explanation_ar:
             text += "\n" + feedback.explanation_ar
         if not feedback.correct and feedback.expected:
-            text += f"\nالإجابة الصحيحة: {feedback.expected}"
+            text += "\n" + i18n.t("correct_answer_prefix") + str(feedback.expected)
         self._show_feedback(text)
         self._banner.SetLabel(f"{feedback.title_ar}: {feedback.message_ar}")
 
@@ -426,7 +509,7 @@ class LessonPanel(BasePanel):
             return
         if text:
             self._feedback_box.SetValue(text)
-            self._feedback_box.SetName("نتيجة الإجابة: " + text.split("\n")[0])
+            self._feedback_box.SetName(i18n.t("feedback_name_prefix") + text.split("\n")[0])
             self._feedback_box.Show()
         else:
             self._feedback_box.SetValue("")
@@ -436,7 +519,7 @@ class LessonPanel(BasePanel):
     def _clear(self) -> None:
         for cell in self._cells:
             cell.clear()
-        announce(self, "تم مسح النقاط. الخلية فارغة.")
+        announce(self, i18n.t("cleared_announce"))
 
     def _next(self) -> None:
         if self._finished:
@@ -454,34 +537,48 @@ class LessonPanel(BasePanel):
         total = len(self._results)
         lesson = self._lesson
         lvl_key = self._level.key if self._level else ""
-        try:
-            self.context.progress.finalize_session(
-                lesson, lvl_key, correct, total, self.context.mastery_threshold
-            )
-        except Exception:
-            pass
+        if self._mode != "matching":
+            try:
+                self.context.progress.finalize_session(
+                    lesson, lvl_key, correct, total, self.context.mastery_threshold
+                )
+            except Exception:
+                pass
         self.context.progress_changed.emit()
         pct = round(correct / total * 100.0, 1) if total else 0.0
+        passed = bool(total) and pct >= self.context.mastery_threshold
+        note = ""
+        if self._mode == "placement":
+            self._report_placement()
+            note = "\n" + self._placement_note
         summary = (
-            f"انتهت الجلسة.\n"
-            f"الإجابات الصحيحة: {correct} من {total} ({pct}%).\n"
-            f"نسبة الإتقان المطلوبة: {int(round(self.context.mastery_threshold))}%.\n"
-            f"{'أحسنت! أتممت الدرس.' if total and pct >= self.context.mastery_threshold else 'واصل التدريب لتحقيق نسبة الإتقان.'}\n"
-            "تم حفظ التقدّم محليًا."
+            i18n.t("session_ended") + "\n"
+            + i18n.t("session_correct").format(correct=correct, total=total, pct=pct) + "\n"
+            + i18n.t("session_mastery").format(pct=int(round(self.context.mastery_threshold))) + "\n"
+            + (i18n.t("session_great") if passed else i18n.t("session_keep")) + "\n"
+            + i18n.t("session_saved")
+            + note
         )
         self._finished = True
         self._end_text.SetLabel(summary)
         if self._question_box is not None:
             self._question_box.SetValue(summary)
-            self._question_box.SetName("ملخّص الجلسة: " + summary.split("\n")[0])
+            self._question_box.SetName(i18n.t("summary_title") + summary.split("\n")[0])
         self._show_feedback(summary)
+        # احتفال عند إتمام الجلسة (يُعزّز إحساس الإنجاز، خاصة للطفل الكفيف).
+        if passed:
+            try:
+                if bool(self.context.settings.get("encouragement_enabled", True)):
+                    self.context.sounds.celebrate()
+            except Exception:
+                pass
         self._btn_confirm.Enable(False)
         self._btn_clear.Enable(False)
         for cell in self._cells:
             cell.Disable()
         if self._answer_box is not None:
             self._answer_box.Disable()
-        self._btn_next.SetLabel("إنهاء والعودة إلى الرئيسية")
+        self._btn_next.SetLabel(i18n.t("btn_finish_home"))
         self._btn_next.Show()
         self.Layout()
         self.context.speak_guidance(summary, self._lesson.language if self._lesson else "ar")
@@ -501,9 +598,23 @@ class LessonPanel(BasePanel):
             return True
         return False
 
+    def _activate_focused_option(self) -> bool:
+        """إن كان التركيز على زرّ خيار، اختره وأعد ``True``."""
+        focused = wx.Window.FindFocus()
+        if focused is not None and focused in self._option_buttons:
+            try:
+                index = self._option_buttons.index(focused)
+            except ValueError:
+                return False
+            self._choose_option(index)
+            return True
+        return False
+
     def confirm_action(self) -> bool:
         if self._answered:
             self._next()
+            return True
+        if self._activate_focused_option():
             return True
         self._on_confirm()
         return True
@@ -519,6 +630,10 @@ class LessonPanel(BasePanel):
             return True
         if self._answered:
             self._next()
+            return True
+        # إن كان التركيز على أحد أزرار الخيارات، فليختر الإجابة المعروضة
+        # (مفتاح الإدخال يختار الخيار تمامًا كما يفعل مفتاح المسافة).
+        if self._activate_focused_option():
             return True
         self._on_confirm()
         return True

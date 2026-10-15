@@ -8,14 +8,14 @@
 ;    - تشغيل التطبيق بعد التثبيت (اختياري)
 ;
 ;  البناء (بعد إنتاج dist\BrailleGo.exe):
-;    ISCC.exe /DAppVersion=1.2.0 installer\BrailleGo.iss
+;    ISCC.exe /DAppVersion=1.3.0 installer\BrailleGo.iss
 ;
 ;  ملاحظة: المُثبِّت يعمل دون صلاحيات مسؤول افتراضيًا (يُثبّت للمستخدم
 ;  الحالي)، ويمكن للمستخدم اختيار التثبيت لكل المستخدمين من نافذة التثبيت.
 ; ---------------------------------------------------------------------------
 
 #ifndef AppVersion
-  #define AppVersion "1.2.0"
+  #define AppVersion "1.3.0"
 #endif
 #ifndef SourceExe
   #define SourceExe "..\dist\BrailleGo.exe"

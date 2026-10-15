@@ -320,8 +320,14 @@ def apply_theme_to(window: wx.Window, theme: Theme) -> None:
     def visit(win: wx.Window) -> None:
         try:
             keep_font = bool(getattr(win, "_keep_font", False))
-            if isinstance(win, wx.Panel):
-                win.SetBackgroundColour(bg)
+            if isinstance(win, wx.StaticBox):
+                # إطار البطاقة: نصّ بلون النص وخلفية بلون السطح.
+                win.SetForegroundColour(text)
+                win.SetBackgroundColour(surface)
+            elif isinstance(win, wx.Panel):
+                # البطاقات (التي تحمل السمة ``_surface``) تُلوَّن بلون السطح
+                # لتبدو بارزة عن خلفية الشاشة، وبقية اللوحات بلون الخلفية.
+                win.SetBackgroundColour(surface if getattr(win, "_surface", False) else bg)
             elif isinstance(win, wx.TextCtrl):
                 win.SetBackgroundColour(surface)
                 win.SetForegroundColour(text)

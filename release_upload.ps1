@@ -1,12 +1,12 @@
 # Upload Braille Go release assets to GitHub with retries.
 #
 # Usage:
-#   powershell -ExecutionPolicy Bypass -File release_upload.ps1 -Tag v1.2.0
+#   powershell -ExecutionPolicy Bypass -File release_upload.ps1 -Tag v1.3.0
 #
 # Expects the split parts in dist\parts\ (see Split-File helper / build_wx.ps1).
 
 param(
-    [string]$Tag = "v1.2.0",
+    [string]$Tag = "v1.3.0",
     [int]$MaxAttempts = 12,
     [int]$BackoffSeconds = 8
 )

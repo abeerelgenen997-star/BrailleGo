@@ -13,6 +13,8 @@ import queue
 import threading
 from dataclasses import dataclass
 
+from . import i18n
+
 
 @dataclass(frozen=True)
 class VoiceInfo:
@@ -29,7 +31,7 @@ class NullSpeechService:
 
     def __init__(self) -> None:
         self.available = False
-        self.reason_ar = "محرّك النطق غير متوفّر."
+        self.reason_ar = ""
         self._last = ""
 
     def set_enabled(self, enabled: bool) -> None: ...
@@ -52,7 +54,7 @@ class NullSpeechService:
         return False
 
     def status_text(self) -> str:
-        return self.reason_ar
+        return self.reason_ar or i18n.t("speech_unavailable")
 
     @property
     def is_speaking(self) -> bool:
@@ -109,7 +111,7 @@ class SpeechService:
                 )
             self.available = True
         except Exception as exc:  # pragma: no cover
-            self.reason_ar = f"تعذّر تشغيل محرّك النطق: {exc}"
+            self.reason_ar = i18n.t("speech_engine_error", exc=exc)
             self.available = False
         self._ready.set()
 
@@ -208,15 +210,12 @@ class SpeechService:
 
     def status_text(self) -> str:
         if not self.available:
-            return self.reason_ar or "النطق غير متاح."
+            return self.reason_ar or i18n.t("speech_not_available")
         if not self._voices:
-            return "محرّك النطق متاح لكن لا توجد أصوات مثبّتة."
+            return i18n.t("speech_no_voices")
         if not self.has_language("ar"):
-            return (
-                "لا يوجد صوت عربي مثبّت على الجهاز؛ سيبقى التطبيق قابلًا للاستخدام "
-                "وقد يُنطق النص العربي بصوت مختلف أو لا يُنطق."
-            )
-        return f"النطق متاح ({len(self._voices)} صوت)."
+            return i18n.t("speech_no_arabic")
+        return i18n.t("speech_available", count=len(self._voices))
 
     # ------------------------------------------------------------------
     # Actions

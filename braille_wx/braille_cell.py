@@ -19,9 +19,10 @@ import wx
 
 from braille_go.core.braille import (
     BrailleCell,
-    DOT_NAMES_AR,
     STANDARD_DOT_COUNT,
 )
+
+from . import i18n
 
 #: ترتيب النقاط: (صف، عمود، رقم النقطة). الأعمدة: 0 = يسار، 1 = يمين.
 _DOT_LAYOUT: tuple[tuple[int, int, int], ...] = (
@@ -59,10 +60,16 @@ class _DotCanvas(wx.Panel):
 
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
         self.SetCanFocus(interactive)
+        #: برايل يُقرأ دائمًا من اليسار إلى اليمين، لذا نُلزم الخلية بهذا
+        #: الاتجاه حتى لو كانت الواجهة العربية يمينًا→يسارًا.
+        try:
+            self.SetLayoutDirection(wx.Layout_LeftToRight)
+        except Exception:
+            pass
         if interactive:
-            self.SetName("خلية برايل التفاعلية")
+            self.SetName(i18n.t("braille_interactive"))
         else:
-            self.SetName("نمط برايل")
+            self.SetName(i18n.t("braille_pattern_short"))
 
         self.Bind(wx.EVT_PAINT, self._on_paint)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda event: None)
@@ -141,16 +148,21 @@ class _DotCanvas(wx.Panel):
         if self.on_change is not None:
             self.on_change(frozenset(self._dots))
         if announce_change:
-            state = "محدَّدة" if dot in self._dots else "غير محدَّدة"
-            self.SetHelpText(f"{DOT_NAMES_AR[dot]} {state}. {self._summary_ar()}")
+            self.SetHelpText(self._dot_state_text(dot) + " " + self._summary())
 
     # ------------------------------------------------------------------
     # إمكانية الوصول
     # ------------------------------------------------------------------
-    def _summary_ar(self) -> str:
+    def _dot_state_text(self, dot: int) -> str:
+        label = i18n.t("dot_name", n=dot)
+        key = "cell_dot_selected" if dot in self._dots else "cell_dot_unselected"
+        return i18n.t(key, dot=label)
+
+    def _summary(self) -> str:
         if not self._dots:
-            return "الخلية فارغة"
-        return "النقاط المحددة: " + "، ".join(str(d) for d in sorted(self._dots))
+            return i18n.t("cell_summary_empty")
+        dots = i18n.t("ex_separator").join(str(d) for d in sorted(self._dots))
+        return i18n.t("cell_summary_dots", dots=dots)
 
     def state_text_ar(self) -> str:
         from .a11y import describe_braille_cell
@@ -160,11 +172,7 @@ class _DotCanvas(wx.Panel):
     def _refresh_accessible(self) -> None:
         description = self.state_text_ar()
         if self._interactive:
-            description += (
-                " استخدم مفاتيح الأرقام من 1 إلى 6 لتبديل النقاط، "
-                "ومفاتيح الأسهم للتنقل بين النقاط، ومفتاح المسافة للتبديل، "
-                "ومفتاح الإدخال للتأكيد."
-            )
+            description += " " + i18n.t("cell_input_hint")
         self.SetHelpText(description)
 
     # ------------------------------------------------------------------
@@ -281,7 +289,7 @@ class _DotCanvas(wx.Panel):
             return
         if code in (wx.WXK_BACK, wx.WXK_DELETE):
             self.clear()
-            self.SetHelpText("تم مسح النقاط. الخلية فارغة.")
+            self.SetHelpText(i18n.t("cell_cleared"))
             return
         if code == wx.WXK_UP:
             self._move_cursor(0, -1)
@@ -309,8 +317,7 @@ class _DotCanvas(wx.Panel):
                 self._cursor = pos[2]
                 break
         self.Refresh()
-        state = "محدَّدة" if self._cursor in self._dots else "غير محدَّدة"
-        self.SetHelpText(f"{DOT_NAMES_AR[self._cursor]} {state}.")
+        self.SetHelpText(self._dot_state_text(self._cursor))
 
 
 class BrailleCellInput(_DotCanvas):
@@ -318,7 +325,7 @@ class BrailleCellInput(_DotCanvas):
 
     def __init__(self, parent: wx.Window, *, scale: float = 1.4, theme=None) -> None:
         super().__init__(parent, interactive=True, scale=scale, theme=theme)
-        self.SetToolTip("حدّد النقاط بمفاتيح الأرقام 1-6 أو بالفأرة، ثم اضغط تأكيد الإجابة (Ctrl+Enter).")
+        self.SetToolTip(i18n.t("cell_toggle_tooltip"))
 
 
 class BrailleCellsView(_DotCanvas):
@@ -339,7 +346,7 @@ class BrailleCellsView(_DotCanvas):
         from .a11y import describe_cells
 
         description = describe_cells(self._cells)
-        self.SetName("نمط برايل: " + description)
+        self.SetName(i18n.t("braille_pattern") + description)
         self.SetHelpText(description)
         self.InvalidateBestSize()
         self.Refresh()

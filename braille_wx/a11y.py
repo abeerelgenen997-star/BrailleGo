@@ -14,6 +14,8 @@ import wx
 
 from braille_go.core.braille import BrailleCell
 
+from . import i18n
+
 
 def set_accessible(window: wx.Window, name: str = "", description: str = "") -> wx.Window:
     """اضبط الاسم/الوصف لقارئ الشاشة إن كان متاحًا، ثم أعِد العنصر."""
@@ -30,30 +32,36 @@ def set_accessible(window: wx.Window, name: str = "", description: str = "") -> 
 
 
 def describe_braille_cell(cell: BrailleCell) -> str:
-    """وصف نصي كامل لحالة خلية برايل (للقراءة والنطق)."""
+    """وصف نصي كامل لحالة خلية برايل (للقراءة والنطق)، بلغة الواجهة."""
     if cell.is_empty:
-        return (
-            "خلية برايل فارغة. لا توجد نقاط محددة. "
-            "النقاط المتاحة هي 1 و2 و3 في العمود الأيسر، و4 و5 و6 في العمود الأيمن."
+        return i18n.t("a11y_cell_empty")
+    if i18n.get_lang() == "ar":
+        dots = cell.describe_ar()
+    else:
+        dots = i18n.t("ex_separator").join(
+            i18n.t("dot_name", n=d) for d in cell.dots
         )
-    return (
-        f"خلية برايل: {cell.describe_ar()}. "
-        f"عدد النقاط المحددة {cell.count} من 6. "
-        f"النمط هو {cell.to_dot_string()}."
+    return i18n.t(
+        "a11y_cell_dots",
+        dots=dots,
+        count=cell.count,
+        pattern=cell.to_dot_string(),
     )
 
 
 def describe_cells(cells: tuple[BrailleCell, ...]) -> str:
-    """وصف نصي لسلسلة خلايا (كلمة أو جملة)."""
+    """وصف نصي لسلسلة خلايا (كلمة أو جملة)، بلغة الواجهة."""
     if not cells:
-        return "لا توجد خلايا."
+        return i18n.t("a11y_no_cells")
     parts = []
     for position, cell in enumerate(cells, start=1):
         if cell.is_empty:
-            parts.append(f"الخلية {position}: فراغ")
+            parts.append(i18n.t("a11y_cell_blank", n=position))
         else:
-            parts.append(f"الخلية {position}: النقاط {cell.to_dot_string()}")
-    return "؛ ".join(parts)
+            parts.append(
+                i18n.t("a11y_cell_position", n=position, dots=cell.to_dot_string())
+            )
+    return i18n.t("ex_separator").join(parts)
 
 
 def set_status(window: wx.Window, message: str) -> None:

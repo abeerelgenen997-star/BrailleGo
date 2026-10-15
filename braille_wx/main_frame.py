@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import wx
 
+from braille_go.core.curriculum import LEVELS
+
 from . import i18n
 from . import theme as theme_mod
 from .context import WxAppContext
@@ -20,6 +22,8 @@ from .screens import (
     HomePanel,
     InstructorPanel,
     LessonsPanel,
+    MatchPanel,
+    PlacementPanel,
     PracticePanel,
     ProgressPanel,
     ReviewPanel,
@@ -75,6 +79,7 @@ class MainFrame(wx.Frame):
         self._build_menu()
         self._build_accelerators()
         self._bind_events()
+        self._apply_layout_direction()
 
         self.apply_theme()
         self.refresh_status()
@@ -97,6 +102,8 @@ class MainFrame(wx.Frame):
             "alphabet": AlphabetPanel,
             "lesson": LessonPanel,
             "practice": PracticePanel,
+            "placement": PlacementPanel,
+            "match": MatchPanel,
             "exams": ExamsPanel,
             "review": ReviewPanel,
             "progress": ProgressPanel,
@@ -122,22 +129,62 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, lambda event: self.Close(), item)
         bar.Append(file_menu, i18n.t("menu_file"))
 
-        learn_menu = wx.Menu()
-        learn_items = [
-            ("home", i18n.t("app_name"), "Ctrl+H"),
-            ("lessons", i18n.t("lessons_levels"), "Ctrl+L"),
-            ("alphabet", i18n.t("alphabet_guide"), "Ctrl+Shift+A"),
-            ("practice", i18n.t("practice"), "Ctrl+T"),
-            ("exams", i18n.t("exams"), "Ctrl+X"),
+        # الدروس: قائمة منسدلة فيها كل الدروس مرتّبة حسب المستويات -----------
+        lessons_menu = wx.Menu()
+        item = lessons_menu.Append(wx.ID_ANY, i18n.t("all_lessons") + "\tCtrl+L", i18n.t("all_lessons"))
+        self.ID_NAV["lessons"] = item.GetId()
+        self.Bind(wx.EVT_MENU, lambda event: self.navigate_to("lessons"), item)
+        lessons_menu.AppendSeparator()
+        for level in LEVELS:
+            submenu = wx.Menu()
+            for lesson in level.lessons:
+                sub_item = submenu.Append(wx.ID_ANY, i18n.lesson_title(lesson), i18n.lesson_description(lesson))
+                self.Bind(
+                    wx.EVT_MENU,
+                    lambda event, lk=lesson.key, lv=level.key: self.navigate_to("lesson", lesson_key=lk, level_key=lv),
+                    sub_item,
+                )
+            lessons_menu.AppendSubMenu(submenu, f"{level.number}. {i18n.level_title(level)}")
+        bar.Append(lessons_menu, i18n.t("menu_lessons"))
+
+        # التدريبات --------------------------------------------------------
+        practice_menu = wx.Menu()
+        practice_items = [
+            ("practice", i18n.t("general_practice"), "Ctrl+T"),
             ("review", i18n.t("review_errors"), "Ctrl+W"),
+            ("match", i18n.t("match_title"), ""),
+            ("alphabet", i18n.t("alphabet_guide"), "Ctrl+Shift+A"),
+        ]
+        for screen_id, label, accel in practice_items:
+            text = f"{label}\t{accel}" if accel else label
+            item = practice_menu.Append(wx.ID_ANY, text, label)
+            self.ID_NAV[screen_id] = item.GetId()
+            self.Bind(wx.EVT_MENU, lambda event, sid=screen_id: self.navigate_to(sid), item)
+        bar.Append(practice_menu, i18n.t("menu_practice"))
+
+        # الاختبارات + تحديد المستوى --------------------------------------
+        exams_menu = wx.Menu()
+        item = exams_menu.Append(wx.ID_ANY, i18n.t("exams_levels_title") + "\tCtrl+X", i18n.t("exams_levels_title"))
+        self.ID_NAV["exams"] = item.GetId()
+        self.Bind(wx.EVT_MENU, lambda event: self.navigate_to("exams"), item)
+        exams_menu.AppendSeparator()
+        item = exams_menu.Append(wx.ID_ANY, i18n.t("placement"), i18n.t("placement_desc"))
+        self.ID_NAV["placement"] = item.GetId()
+        self.Bind(wx.EVT_MENU, lambda event: self.navigate_to("placement"), item)
+        bar.Append(exams_menu, i18n.t("menu_exams"))
+
+        # الانتقال ---------------------------------------------------------
+        go_menu = wx.Menu()
+        go_items = [
+            ("home", i18n.t("app_name"), "Ctrl+H"),
             ("progress", i18n.t("progress"), "Ctrl+P"),
             ("instructor", i18n.t("instructor"), "Ctrl+I"),
         ]
-        for screen_id, label, accel in learn_items:
-            item = learn_menu.Append(wx.ID_ANY, f"{label}\t{accel}", label)
+        for screen_id, label, accel in go_items:
+            item = go_menu.Append(wx.ID_ANY, f"{label}\t{accel}", label)
             self.ID_NAV[screen_id] = item.GetId()
             self.Bind(wx.EVT_MENU, lambda event, sid=screen_id: self.navigate_to(sid), item)
-        bar.Append(learn_menu, i18n.t("menu_learn"))
+        bar.Append(go_menu, i18n.t("menu_go"))
 
         view_menu = wx.Menu()
         self.ID_MODE = []
@@ -148,9 +195,9 @@ class MainFrame(wx.Frame):
                 item.Check(True)
             self.Bind(wx.EVT_MENU, lambda event, k=key: self._set_mode(k), item)
         view_menu.AppendSeparator()
-        self._font_inc_item = view_menu.Append(wx.ID_ANY, "تكبير الخط\tCtrl+=", "تكبير الخط")
+        self._font_inc_item = view_menu.Append(wx.ID_ANY, i18n.t("zoom_in") + "\tCtrl+=", i18n.t("zoom_in"))
         self.Bind(wx.EVT_MENU, lambda event: self._change_font(0.1), self._font_inc_item)
-        self._font_dec_item = view_menu.Append(wx.ID_ANY, "تصغير الخط\tCtrl+-", "تصغير الخط")
+        self._font_dec_item = view_menu.Append(wx.ID_ANY, i18n.t("zoom_out") + "\tCtrl+-", i18n.t("zoom_out"))
         self.Bind(wx.EVT_MENU, lambda event: self._change_font(-0.1), self._font_dec_item)
         self._bold_item = view_menu.AppendCheckItem(wx.ID_ANY, i18n.t("bold_text"))
         self._bold_item.Check(bool(self.context.settings.get("bold_text", False)))
@@ -166,7 +213,7 @@ class MainFrame(wx.Frame):
         item = help_menu.Append(wx.ID_ANY, i18n.t("shortcuts") + "\tShift+F1", i18n.t("shortcuts"))
         self.Bind(wx.EVT_MENU, lambda event: self.navigate_to("shortcuts"), item)
         help_menu.AppendSeparator()
-        item = help_menu.Append(wx.ID_ABOUT, "عن البرنامج", "عن البرنامج")
+        item = help_menu.Append(wx.ID_ABOUT, i18n.t("about_program"), i18n.t("about_program"))
         self.Bind(wx.EVT_MENU, self._on_about, item)
         bar.Append(help_menu, i18n.t("menu_help"))
 
@@ -402,6 +449,29 @@ class MainFrame(wx.Frame):
         except Exception:
             pass
 
+    def _apply_layout_direction(self) -> None:
+        """اضبط اتجاه التخطيط (يمين→يسار للعربية ويسار→يمين لغيرها).
+
+        تُطبَّق على الإطار وكل عناصره الفرعية حتى تظهر القوائم والأزرار
+        والحقول بالاتجاه الصحيح للّغة المختارة.
+        """
+        try:
+            direction = (
+                wx.Layout_RightToLeft if i18n.is_rtl() else wx.Layout_LeftToRight
+            )
+        except Exception:
+            return
+
+        def visit(win: wx.Window) -> None:
+            try:
+                win.SetLayoutDirection(direction)
+            except Exception:
+                pass
+            for child in win.GetChildren():
+                visit(child)
+
+        visit(self)
+
     def rebuild_ui(self) -> None:
         """أعِد بناء الواجهة (يُستخدم عند تغيير اللغة)."""
         self._container_sizer.Clear(True)
@@ -409,6 +479,7 @@ class MainFrame(wx.Frame):
         self._build_panels()
         self._build_menu()
         self._build_accelerators()
+        self._apply_layout_direction()
         self.apply_theme()
         self.navigate_to("home")
 
@@ -418,7 +489,7 @@ class MainFrame(wx.Frame):
             stats = self.context.progress.statistics()
             accuracy = int(round(float(stats.get("accuracy", 0.0))))
             progress = int(round(self.context.overall_progress_percent()))
-            left = f"التقدّم العام {progress}% — الدقة {accuracy}%"
+            left = i18n.t("status_progress").format(progress=progress, accuracy=accuracy)
         except Exception:
             left = ""
         right = self.context.speech_status()
@@ -428,12 +499,7 @@ class MainFrame(wx.Frame):
             bar.SetStatusText(right, 1)
 
     def _on_about(self, event) -> None:
-        text = (
-            "Braille Go — تطبيق تعليمي تفاعلي لتعلّم طريقة برايل.\n"
-            "واجهة wxPython أصلية لدعم أفضل لقارئات الشاشة.\n"
-            "يعمل دون اتصال بالإنترنت ويحفظ التقدّم محليًا."
-        )
-        wx.MessageBox(text, "عن البرنامج", wx.OK | wx.ICON_INFORMATION, self)
+        wx.MessageBox(i18n.t("about_text"), i18n.t("about_program"), wx.OK | wx.ICON_INFORMATION, self)
 
     def _on_close(self, event) -> None:
         try:

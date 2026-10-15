@@ -25,6 +25,8 @@ class ExerciseKind(str, Enum):
     BUILD_WORD = "build_word"
     READ_WORD = "read_word"
     READ_SENTENCE = "read_sentence"
+    #: تطابق الحرف المطبوع (المبصر) مع نمط برايل المقابل له.
+    MATCH_LETTER = "match_letter"
 
     @property
     def label_ar(self) -> str:
@@ -44,6 +46,7 @@ _KIND_LABELS: dict[ExerciseKind, str] = {
     ExerciseKind.BUILD_WORD: "تكوين كلمة",
     ExerciseKind.READ_WORD: "قراءة كلمة",
     ExerciseKind.READ_SENTENCE: "قراءة جملة",
+    ExerciseKind.MATCH_LETTER: "تطابق الحرف مع برايل",
 }
 
 

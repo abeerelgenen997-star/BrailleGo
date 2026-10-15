@@ -18,6 +18,21 @@ from .base_panel import BasePanel, clear_sizer
 
 
 # ----------------------------------------------------------------------
+# عناصر مشتركة للواجهة الأمامية الأنيقة
+# ----------------------------------------------------------------------
+def _braille_motif(parent: wx.Window, text: str, theme, size: float = 30.0) -> wx.StaticText:
+    """اعرض شعارًا بنمط برايل كعنصر رسومي بسيط وأنيق."""
+    label = wx.StaticText(parent, label=text)
+    label.SetName(text)
+    label._keep_font = True
+    try:
+        label.SetFont(theme.make_braille_font(size))
+    except Exception:
+        pass
+    return label
+
+
+# ----------------------------------------------------------------------
 # الترحيب
 # ----------------------------------------------------------------------
 class WelcomePanel(BasePanel):
@@ -27,6 +42,8 @@ class WelcomePanel(BasePanel):
         super().__init__(parent, context, frame)
         clear_sizer(self.content)
         self.content.AddStretchSpacer(1)
+        self.content.Add(_braille_motif(self, "⠃⠗⠁⠊⠇⠇⠑ ⠛⠕", self.theme, 34.0), 0, wx.ALIGN_CENTER | wx.ALL, 8)
+
         title = wx.StaticText(self, label=i18n.t("welcome"))
         title.SetName(i18n.t("welcome"))
         try:
@@ -36,6 +53,10 @@ class WelcomePanel(BasePanel):
         except Exception:
             pass
         self.content.Add(title, 0, wx.ALIGN_CENTER | wx.ALL, 20)
+
+        tagline = wx.StaticText(self, label=i18n.t("hero_tagline"))
+        tagline.SetName(i18n.t("hero_tagline"))
+        self.content.Add(tagline, 0, wx.ALIGN_CENTER | wx.ALL, 4)
 
         subtitle = wx.StaticText(self, label=i18n.t("welcome_subtitle"))
         subtitle.SetName(i18n.t("welcome_subtitle"))
@@ -93,7 +114,7 @@ class WelcomePanel(BasePanel):
 
 
 # ----------------------------------------------------------------------
-# الرئيسية
+# الرئيسية (واجهة أمامية رسومية أنيقة)
 # ----------------------------------------------------------------------
 class HomePanel(BasePanel):
     def __init__(self, parent: wx.Window, context, frame) -> None:
@@ -101,33 +122,39 @@ class HomePanel(BasePanel):
 
     def activate(self, **kwargs) -> None:
         clear_sizer(self.content)
-        self.content.Add(W.heading(self, "Braille Go", self.theme), 0, wx.ALL, 8)
-        self.content.Add(
-            W.wrapped_text(
-                self,
-                "تطبيق تعليمي تفاعلي لتعلّم طريقة برايل العربي والإنجليزي، مع نظام "
-                "مستويات وتقدّم محفوظ محليًا، وواجهة تعمل دون اتصال بالإنترنت.",
-            ),
-            0, wx.EXPAND | wx.ALL, 10,
-        )
+
+        # لافتة ترحيبية أنيقة (شعار برايل + اسم التطبيق + عبارة محفّزة).
+        hero = wx.Panel(self)
+        hero_sizer = wx.BoxSizer(wx.VERTICAL)
+        hero.SetSizer(hero_sizer)
+        hero_sizer.Add(_braille_motif(hero, "⠃⠗⠁⠊⠇⠇⠑", self.theme, 30.0), 0, wx.ALIGN_CENTER | wx.TOP, 12)
+        hero_sizer.Add(W.heading(hero, "Braille Go", self.theme), 0, wx.ALIGN_CENTER | wx.TOP, 6)
+        tagline = wx.StaticText(hero, label=i18n.t("hero_tagline"))
+        tagline.SetName(i18n.t("hero_tagline"))
+        hero_sizer.Add(tagline, 0, wx.ALIGN_CENTER | wx.ALL, 6)
+        self.content.Add(hero, 0, wx.EXPAND | wx.ALL, 6)
+
+        self.content.Add(W.wrapped_text(self, i18n.t("home_intro")), 0, wx.EXPAND | wx.ALL, 10)
 
         instructor_mode = bool(self.context.settings.get("instructor_mode", False))
 
         row = wx.BoxSizer(wx.HORIZONTAL)
         self.content.Add(row, 0, wx.EXPAND | wx.ALL, 6)
 
-        learn, lsizer = W.card(self, row, "التعلّم")
+        learn, lsizer = W.card(self, row, i18n.t("card_learn"), proportion=1)
         lsizer.Add(W.action_button(learn, i18n.t("start_learning"), primary=True, on_click=self._start), 0, wx.EXPAND | wx.ALL, 4)
         lsizer.Add(W.action_button(learn, i18n.t("continue_last"), on_click=self._continue), 0, wx.EXPAND | wx.ALL, 4)
         lsizer.Add(W.action_button(learn, i18n.t("lessons_levels"), on_click=lambda: self.frame.navigate_to("lessons")), 0, wx.EXPAND | wx.ALL, 4)
+        lsizer.Add(W.action_button(learn, i18n.t("placement"), on_click=lambda: self.frame.navigate_to("placement")), 0, wx.EXPAND | wx.ALL, 4)
         lsizer.Add(W.action_button(learn, i18n.t("alphabet_guide"), on_click=lambda: self.frame.navigate_to("alphabet")), 0, wx.EXPAND | wx.ALL, 4)
 
-        practice, psizer = W.card(self, row, "التدريب")
-        psizer.Add(W.action_button(practice, "التدريب العام", on_click=lambda: self.frame.navigate_to("practice")), 0, wx.EXPAND | wx.ALL, 4)
+        practice, psizer = W.card(self, row, i18n.t("card_practice"), proportion=1)
+        psizer.Add(W.action_button(practice, i18n.t("general_practice"), on_click=lambda: self.frame.navigate_to("practice")), 0, wx.EXPAND | wx.ALL, 4)
+        psizer.Add(W.action_button(practice, i18n.t("match_title"), on_click=lambda: self.frame.navigate_to("match")), 0, wx.EXPAND | wx.ALL, 4)
         psizer.Add(W.action_button(practice, i18n.t("exams"), on_click=lambda: self.frame.navigate_to("exams")), 0, wx.EXPAND | wx.ALL, 4)
         psizer.Add(W.action_button(practice, i18n.t("review_errors"), on_click=lambda: self.frame.navigate_to("review")), 0, wx.EXPAND | wx.ALL, 4)
 
-        track, tsizer = W.card(self, row, "المتابعة")
+        track, tsizer = W.card(self, row, i18n.t("card_track"), proportion=1)
         tsizer.Add(W.action_button(track, i18n.t("progress"), on_click=lambda: self.frame.navigate_to("progress")), 0, wx.EXPAND | wx.ALL, 4)
         # أدوات المدرب تظهر فقط عند اختيار فئة "مدرب".
         if instructor_mode:
@@ -166,27 +193,33 @@ class LessonsPanel(BasePanel):
         for level in LEVELS:
             unlocked = self.context.is_level_unlocked(level.key)
             evaluation = self.context.evaluate(level)
-            panel, sizer = W.card(self, self.content, f"{level.number}. {level.title_ar}")
+            panel, sizer = W.card(self, self.content, f"{level.number}. {i18n.level_title(level)}")
             sizer.Add(W.wrapped_text(
                 panel,
-                f"{level.description_ar}\nمكتمل: {evaluation.lessons_completed}/{evaluation.lessons_total} — "
-                f"إتقان: {int(round(evaluation.mastery))}%",
+                f"{i18n.level_description(level)}\n" + i18n.t("level_complete_status").format(
+                    done=evaluation.lessons_completed,
+                    total=evaluation.lessons_total,
+                    pct=int(round(evaluation.mastery)),
+                ),
             ), 0, wx.EXPAND | wx.ALL, 4)
             for lesson in level.lessons:
                 result = self.context.progress.lesson_result(lesson.key)
                 completed = bool(result and result.completed)
                 attempted = bool(result and result.attempts > 0)
-                status = "✓ مكتمل" if completed else ("مُجرَّب" if attempted else "جديد")
+                status = (
+                    i18n.t("lesson_status_done") if completed
+                    else (i18n.t("lesson_status_tried") if attempted else i18n.t("lesson_status_new"))
+                )
                 button = W.action_button(
                     panel,
-                    f"{lesson.title_ar} — {status}",
+                    f"{i18n.lesson_title(lesson)} — {status}",
                     on_click=lambda lk=lesson.key, lv=level.key: self.frame.navigate_to("lesson", lesson_key=lk, level_key=lv),
                     enabled=unlocked,
-                    tooltip=lesson.description_ar,
+                    tooltip=i18n.lesson_description(lesson),
                 )
                 sizer.Add(button, 0, wx.EXPAND | wx.ALL, 3)
             if not unlocked:
-                sizer.Add(W.body(panel, "يُفتح هذا المستوى بعد إتقان المستوى السابق."), 0, wx.ALL, 3)
+                sizer.Add(W.body(panel, i18n.t("level_locked_hint")), 0, wx.ALL, 3)
         self.content.AddStretchSpacer(1)
         self.finish_layout()
 
@@ -198,15 +231,19 @@ class PracticePanel(BasePanel):
     def __init__(self, parent: wx.Window, context, frame) -> None:
         super().__init__(parent, context, frame)
         clear_sizer(self.content)
-        self.content.Add(W.heading(self, "التدريب العام", self.theme), 0, wx.ALL, 8)
+        self.content.Add(W.heading(self, i18n.t("practice_heading"), self.theme), 0, wx.ALL, 8)
 
-        panel, sizer = W.card(self, self.content, "مراجعة مركّزة")
-        sizer.Add(W.wrapped_text(panel, "مراجعة على الرموز الأكثر خطأً لديك، وإن لم توجد أخطاء فتدريب عام."), 0, wx.EXPAND | wx.ALL, 4)
-        sizer.Add(W.action_button(panel, "ابدأ تدريب المراجعة", primary=True, on_click=self._review), 0, wx.ALL, 4)
+        panel, sizer = W.card(self, self.content, i18n.t("practice_focus_title"))
+        sizer.Add(W.wrapped_text(panel, i18n.t("practice_focus_text")), 0, wx.EXPAND | wx.ALL, 4)
+        sizer.Add(W.action_button(panel, i18n.t("practice_focus_start"), primary=True, on_click=self._review), 0, wx.ALL, 4)
 
-        panel2, sizer2 = W.card(self, self.content, "تدريب عشوائي مختلط")
-        sizer2.Add(W.wrapped_text(panel2, "تدريب مختلط من أول درس متاح."), 0, wx.EXPAND | wx.ALL, 4)
-        sizer2.Add(W.action_button(panel2, "ابدأ تدريب عشوائي", on_click=self._mixed), 0, wx.ALL, 4)
+        panel2, sizer2 = W.card(self, self.content, i18n.t("practice_mixed_title"))
+        sizer2.Add(W.wrapped_text(panel2, i18n.t("practice_mixed_text")), 0, wx.EXPAND | wx.ALL, 4)
+        sizer2.Add(W.action_button(panel2, i18n.t("practice_mixed_start"), on_click=self._mixed), 0, wx.ALL, 4)
+
+        panel3, sizer3 = W.card(self, self.content, i18n.t("match_title"))
+        sizer3.Add(W.wrapped_text(panel3, i18n.t("match_desc")), 0, wx.EXPAND | wx.ALL, 4)
+        sizer3.Add(W.action_button(panel3, i18n.t("match_start"), on_click=lambda: self.frame.navigate_to("match")), 0, wx.ALL, 4)
         self.content.AddStretchSpacer(1)
         self.finish_layout()
 
@@ -222,24 +259,83 @@ class PracticePanel(BasePanel):
 
 
 # ----------------------------------------------------------------------
+# تحديد المستوى
+# ----------------------------------------------------------------------
+class PlacementPanel(BasePanel):
+    """اختبار تحديد المستوى: تجربة قصيرة تقترح مستوى البداية وتضبطه."""
+
+    def activate(self, **kwargs) -> None:
+        clear_sizer(self.content)
+        self.content.Add(W.heading(self, i18n.t("placement_title"), self.theme), 0, wx.ALL, 8)
+        panel, sizer = W.card(self, self.content, i18n.t("placement"))
+        sizer.Add(W.wrapped_text(panel, i18n.t("placement_desc")), 0, wx.EXPAND | wx.ALL, 4)
+        sizer.Add(W.action_button(panel, i18n.t("placement_start"), primary=True, on_click=self._start), 0, wx.ALL, 4)
+        self.content.AddStretchSpacer(1)
+        self.finish_layout()
+
+    def _start(self) -> None:
+        lesson = first_lesson()
+        level = level_of_lesson(lesson.key)
+        self.frame.navigate_to("lesson", lesson_key=lesson.key, level_key=level.key if level else "", mode="placement")
+
+
+# ----------------------------------------------------------------------
+# تمرين التطابق (الحرف المبصر مع برايل)
+# ----------------------------------------------------------------------
+class MatchPanel(BasePanel):
+    """يربط المتعلّم المبصر بين الحرف المطبوع ونمط برايل المطابق."""
+
+    def activate(self, **kwargs) -> None:
+        clear_sizer(self.content)
+        self.content.Add(W.heading(self, i18n.t("match_title"), self.theme), 0, wx.ALL, 8)
+        panel, sizer = W.card(self, self.content, i18n.t("match_title"))
+        sizer.Add(W.wrapped_text(panel, i18n.t("match_desc")), 0, wx.EXPAND | wx.ALL, 4)
+
+        # عرض توضيحي: الحرف المطبوع ⇄ نمط برايل.
+        demo = wx.StaticText(panel, label="أ ⇄ ⠁     ب ⇄ ⠃     ذ ⇄ ⠮     A ⇄ ⠁     B ⇄ ⠃")
+        demo.SetName(i18n.t("match_desc"))
+        try:
+            demo.SetFont(self.theme.make_braille_font(22.0))
+        except Exception:
+            pass
+        sizer.Add(demo, 0, wx.ALL, 6)
+
+        row = wx.BoxSizer(wx.HORIZONTAL)
+        row.Add(W.action_button(panel, i18n.t("letters_ar"), primary=True, on_click=lambda: self._start("ar")), 0, wx.ALL, 4)
+        row.Add(W.action_button(panel, i18n.t("letters_en"), on_click=lambda: self._start("en")), 0, wx.ALL, 4)
+        sizer.Add(row, 0, wx.ALL, 4)
+        self.content.AddStretchSpacer(1)
+        self.finish_layout()
+
+    def _start(self, language: str) -> None:
+        self.frame.navigate_to("lesson", lesson_key="", level_key="", mode="matching", match_lang=language)
+
+
+# ----------------------------------------------------------------------
 # الاختبارات
 # ----------------------------------------------------------------------
 class ExamsPanel(BasePanel):
     def activate(self, **kwargs) -> None:
         clear_sizer(self.content)
         self.content.Add(W.heading(self, i18n.t("exams"), self.theme), 0, wx.ALL, 8)
-        panel, sizer = W.card(self, self.content, "اختبارات المستويات")
-        sizer.Add(W.wrapped_text(panel, "اختر مستوى لتقدّم لاختباره (وفق شروط الإتقان)."), 0, wx.EXPAND | wx.ALL, 4)
+        panel, sizer = W.card(self, self.content, i18n.t("exams_levels_title"))
+        sizer.Add(W.wrapped_text(panel, i18n.t("exams_levels_text")), 0, wx.EXPAND | wx.ALL, 4)
         for level in LEVELS:
             evaluation = self.context.evaluate(level)
             unlocked = self.context.is_level_unlocked(level.key)
             exam_key = self._exam_lesson(level.key)
             sizer.Add(W.action_button(
                 panel,
-                f"المستوى {level.number}: {level.title_ar} — إتقان {int(round(evaluation.mastery))}%",
+                i18n.t("exam_level_button").format(
+                    n=level.number, title=i18n.level_title(level), pct=int(round(evaluation.mastery))
+                ),
                 on_click=lambda lk=exam_key, lv=level.key: self.frame.navigate_to("lesson", lesson_key=lk, level_key=lv, mode="exam"),
                 enabled=unlocked,
             ), 0, wx.EXPAND | wx.ALL, 3)
+        sizer.Add(W.action_button(
+            panel, i18n.t("placement_start"),
+            on_click=lambda: self.frame.navigate_to("placement"),
+        ), 0, wx.EXPAND | wx.ALL, 3)
         self.content.AddStretchSpacer(1)
         self.finish_layout()
 
@@ -259,20 +355,20 @@ class ExamsPanel(BasePanel):
 class ReviewPanel(BasePanel):
     def activate(self, **kwargs) -> None:
         clear_sizer(self.content)
-        self.content.Add(W.heading(self, "مراجعة الأخطاء السابقة", self.theme), 0, wx.ALL, 8)
+        self.content.Add(W.heading(self, i18n.t("review_heading"), self.theme), 0, wx.ALL, 8)
         wrong = self.context.progress.wrong_answers(limit=30)
         if not wrong:
-            panel, sizer = W.card(self, self.content, "لا توجد أخطاء محفوظة بعد")
-            sizer.Add(W.wrapped_text(panel, "بعد الإجابة على التدريبات ستظهر هنا قائمة الأخطاء."), 0, wx.EXPAND | wx.ALL, 4)
+            panel, sizer = W.card(self, self.content, i18n.t("review_empty_title"))
+            sizer.Add(W.wrapped_text(panel, i18n.t("review_empty_text")), 0, wx.EXPAND | wx.ALL, 4)
         else:
             for row in wrong:
                 panel, sizer = W.card(self, self.content, str(row["lesson_key"]))
                 text = (
-                    f"التاريخ: {row['created_at']}\n"
-                    f"نوع التدريب: {row['kind']}\n"
-                    f"الرموز: {row['symbol_keys']}\n"
-                    f"ما أجبت به: {row['given']}\n"
-                    f"الإجابة الصحيحة: {row['expected']}"
+                    f"{i18n.t('review_date')}: {row['created_at']}\n"
+                    f"{i18n.t('review_kind')}: {row['kind']}\n"
+                    f"{i18n.t('review_symbols')}: {row['symbol_keys']}\n"
+                    f"{i18n.t('review_given')}: {row['given']}\n"
+                    f"{i18n.t('review_expected')}: {row['expected']}"
                 )
                 sizer.Add(W.wrapped_text(panel, text), 0, wx.EXPAND | wx.ALL, 4)
         self.content.AddStretchSpacer(1)
@@ -287,38 +383,50 @@ class ProgressPanel(BasePanel):
         clear_sizer(self.content)
         self.content.Add(W.heading(self, i18n.t("progress"), self.theme), 0, wx.ALL, 8)
         stats = self.context.progress.statistics()
+        accuracy = int(round(float(stats["accuracy"])))
         gauge = wx.Gauge(self, range=100)
-        gauge.SetValue(int(round(float(stats["accuracy"]))))
-        gauge.SetName(f"التقدّم العام {int(round(float(stats['accuracy'])))} بالمئة")
+        gauge.SetValue(accuracy)
+        gauge.SetName(i18n.t("progress_gauge").format(pct=accuracy))
         self.content.Add(gauge, 0, wx.EXPAND | wx.ALL, 8)
         self.content.Add(W.body(
             self,
-            f"إجابات صحيحة: {stats['answers_correct']}/{stats['answers_total']} — "
-            f"دروس جُرّبت: {stats['lessons_attempted']} — مكتملة: {stats['lessons_completed']} — "
-            f"الإتقان المطلوب: {int(round(self.context.mastery_threshold))}%",
+            i18n.t("progress_summary").format(
+                correct=stats["answers_correct"],
+                total=stats["answers_total"],
+                attempted=stats["lessons_attempted"],
+                completed=stats["lessons_completed"],
+                mastery=int(round(self.context.mastery_threshold)),
+            ),
         ), 0, wx.EXPAND | wx.ALL, 8)
 
         for level in LEVELS:
             evaluation = self.context.evaluate(level)
-            panel, sizer = W.card(self, self.content, f"المستوى {level.number}: {evaluation.mastery:.0f}%")
+            panel, sizer = W.card(
+                self, self.content,
+                i18n.t("progress_level_card").format(n=level.number, pct=f"{evaluation.mastery:.0f}"),
+            )
             sizer.Add(W.wrapped_text(
                 panel,
-                f"مكتمل {evaluation.lessons_completed}/{evaluation.lessons_total}. {evaluation.reason_ar}",
+                i18n.t("progress_level_text").format(
+                    done=evaluation.lessons_completed,
+                    total=evaluation.lessons_total,
+                    reason=evaluation.reason_ar,
+                ),
             ), 0, wx.EXPAND | wx.ALL, 4)
 
-        self.content.Add(W.action_button(self, "إعادة ضبط كل التقدّم", on_click=self._reset), 0, wx.ALL, 8)
+        self.content.Add(W.action_button(self, i18n.t("progress_reset"), on_click=self._reset), 0, wx.ALL, 8)
         self.content.AddStretchSpacer(1)
         self.finish_layout()
 
     def _reset(self) -> None:
-        if W.confirm(self, "تأكيد إعادة الضبط", "هل تريد حذف كل بيانات التقدّم؟ لا يمكن التراجع."):
+        if W.confirm(self, i18n.t("progress_reset_title"), i18n.t("progress_reset_text")):
             self.context.progress.reset_all()
             self.activate()
             self.frame.refresh_status()
 
 
 # ----------------------------------------------------------------------
-# الإعدادات (غنية بأنماط العرض)
+# الإعدادات (غنية بأنماط العرض + قائمة اللغات)
 # ----------------------------------------------------------------------
 class SettingsPanel(BasePanel):
     def __init__(self, parent: wx.Window, context, frame) -> None:
@@ -378,10 +486,10 @@ class SettingsPanel(BasePanel):
         self._font.SetName(i18n.t("font_scale"))
         sizer.Add(self._font, 0, wx.EXPAND | wx.ALL, 4)
 
-        sizer.Add(W.body(panel, "حجم خلايا برايل"), 0, wx.ALL, 2)
+        sizer.Add(W.body(panel, i18n.t("settings_cell_size")), 0, wx.ALL, 2)
         self._cell = wx.SpinCtrlDouble(panel, min=0.6, max=3.0, inc=0.05)
         self._cell.SetValue(float(s.get("braille_cell_scale", 1.0)))
-        self._cell.SetName("حجم خلايا برايل")
+        self._cell.SetName(i18n.t("settings_cell_size"))
         sizer.Add(self._cell, 0, wx.EXPAND | wx.ALL, 4)
 
         self._bold = wx.CheckBox(panel, label=i18n.t("bold_text"))
@@ -404,24 +512,24 @@ class SettingsPanel(BasePanel):
         sizer.Add(self._reduce_motion, 0, wx.ALL, 4)
 
         # ألوان مخصّصة ------------------------------------------------
-        cpanel, csizer = W.card(self, self.content, "ألوان مخصّصة")
-        self._custom_colors = wx.CheckBox(cpanel, label="تفعيل الألوان المخصّصة")
+        cpanel, csizer = W.card(self, self.content, i18n.t("settings_custom_colors"))
+        self._custom_colors = wx.CheckBox(cpanel, label=i18n.t("settings_enable_custom"))
         self._custom_colors.SetValue(bool(s.get("text_color") or s.get("background_color")))
         csizer.Add(self._custom_colors, 0, wx.ALL, 4)
-        self._text_color = self._add_color_row(cpanel, csizer, "لون النص", s.get("text_color", "") or self.theme.colors["text"])
-        self._bg_color = self._add_color_row(cpanel, csizer, "لون الخلفية", s.get("background_color", "") or self.theme.colors["background"])
-        self._dot_on = self._add_color_row(cpanel, csizer, "لون النقاط المحدّدة", s.get("dot_color", "") or self.theme.colors["dot_on"])
-        self._dot_off = self._add_color_row(cpanel, csizer, "لون النقاط غير المحدّدة", s.get("dot_empty_color", "") or self.theme.colors["dot_off"])
+        self._text_color = self._add_color_row(cpanel, csizer, i18n.t("text_color"), s.get("text_color", "") or self.theme.colors["text"])
+        self._bg_color = self._add_color_row(cpanel, csizer, i18n.t("bg_color"), s.get("background_color", "") or self.theme.colors["background"])
+        self._dot_on = self._add_color_row(cpanel, csizer, i18n.t("dot_on_color"), s.get("dot_color", "") or self.theme.colors["dot_on"])
+        self._dot_off = self._add_color_row(cpanel, csizer, i18n.t("dot_off_color"), s.get("dot_empty_color", "") or self.theme.colors["dot_off"])
 
         # الصوت والنطق والتشجيع ----------------------------------------
         spanel, ssizer = W.card(self, self.content, i18n.t("audio_section"))
-        self._sound = wx.CheckBox(spanel, label="تشغيل الأصوات")
+        self._sound = wx.CheckBox(spanel, label=i18n.t("settings_sound_on"))
         self._sound.SetValue(bool(s.get("sound_enabled", True)))
         ssizer.Add(self._sound, 0, wx.ALL, 4)
-        self._speech = wx.CheckBox(spanel, label="تشغيل النطق")
+        self._speech = wx.CheckBox(spanel, label=i18n.t("settings_speech_on"))
         self._speech.SetValue(bool(s.get("speech_enabled", False)))
         ssizer.Add(self._speech, 0, wx.ALL, 4)
-        self._guidance = wx.CheckBox(spanel, label="الإرشادات الصوتية")
+        self._guidance = wx.CheckBox(spanel, label=i18n.t("settings_guidance"))
         self._guidance.SetValue(bool(s.get("guidance_enabled", True)))
         ssizer.Add(self._guidance, 0, wx.ALL, 4)
         self._encouragement = wx.CheckBox(spanel, label=i18n.t("encouragement_enabled"))
@@ -436,21 +544,27 @@ class SettingsPanel(BasePanel):
         self._welcome_speech = wx.CheckBox(spanel, label=i18n.t("welcome_speech_enabled"))
         self._welcome_speech.SetValue(bool(s.get("welcome_speech_enabled", True)))
         ssizer.Add(self._welcome_speech, 0, wx.ALL, 4)
-        ssizer.Add(W.body(spanel, "مستوى الصوت"), 0, wx.ALL, 2)
+        ssizer.Add(W.body(spanel, i18n.t("settings_volume")), 0, wx.ALL, 2)
         self._volume = wx.SpinCtrlDouble(spanel, min=0.0, max=1.0, inc=0.05)
         self._volume.SetValue(float(s.get("volume", 1.0)))
         ssizer.Add(self._volume, 0, wx.EXPAND | wx.ALL, 4)
-        ssizer.Add(W.body(spanel, "سرعة النطق"), 0, wx.ALL, 2)
+        ssizer.Add(W.body(spanel, i18n.t("settings_rate")), 0, wx.ALL, 2)
         self._rate = wx.SpinCtrlDouble(spanel, min=-1.0, max=1.0, inc=0.05)
         self._rate.SetValue(float(s.get("speech_rate", 0.0)))
         ssizer.Add(self._rate, 0, wx.EXPAND | wx.ALL, 4)
         ssizer.Add(W.wrapped_text(spanel, f"{i18n.t('speech_status')}: {self.context.speech_status()}"), 0, wx.EXPAND | wx.ALL, 4)
 
         # اللغة والتعلّم ----------------------------------------------
-        lpanel, lsizer = W.card(self, self.content, "اللغة والتعلّم")
+        lpanel, lsizer = W.card(self, self.content, i18n.t("settings_language_section"))
         lsizer.Add(W.body(lpanel, i18n.t("ui_language")), 0, wx.ALL, 2)
-        self._language = wx.Choice(lpanel, choices=[i18n.t("language_ar"), i18n.t("language_en")])
-        self._language.SetSelection(1 if str(s.get("interface_language", "ar")) == "en" else 0)
+        # قائمة تدعم أربع لغات واجهة (العربية/الإنجليزية/الفرنسية/الإسبانية).
+        self._lang_codes = [code for code, _ in i18n.language_choices()]
+        self._lang_names = [name for _, name in i18n.language_choices()]
+        self._language = wx.Choice(lpanel, choices=self._lang_names)
+        self._language.SetName(i18n.t("ui_language"))
+        current_lang = str(s.get("interface_language", "ar")) or "ar"
+        if current_lang in self._lang_codes:
+            self._language.SetSelection(self._lang_codes.index(current_lang))
         lsizer.Add(self._language, 0, wx.EXPAND | wx.ALL, 4)
         self._guided = wx.CheckBox(lpanel, label=i18n.t("guided_mode"))
         self._guided.SetValue(bool(s.get("guided_mode", True)))
@@ -560,7 +674,8 @@ class SettingsPanel(BasePanel):
         if p_index >= 0:
             s.set("user_profile", self._profile_keys[p_index])
         s.set("instructor_mode", self._instructor.GetValue())
-        language = "en" if self._language.GetSelection() == 1 else "ar"
+        l_index = self._language.GetSelection()
+        language = self._lang_codes[l_index] if 0 <= l_index < len(self._lang_codes) else "ar"
         s.set("interface_language", language)
 
         self.context.apply_settings()
@@ -582,7 +697,7 @@ class SettingsPanel(BasePanel):
         return True
 
     def _reset(self) -> None:
-        if W.confirm(self, i18n.t("reset_defaults"), "هل تريد إعادة جميع الإعدادات إلى القيم الافتراضية؟"):
+        if W.confirm(self, i18n.t("reset_defaults"), i18n.t("settings_reset_confirm")):
             self.context.reset_settings()
             self.frame.apply_theme(rebuild=True)
             self._build()
@@ -616,7 +731,7 @@ class InstructorPanel(BasePanel):
                 )
                 list_sizer.Add(row, 0, wx.EXPAND | wx.ALL, 3)
 
-        banner, bsizer = W.card(self, self.content, "تقرير الفصل")
+        banner, bsizer = W.card(self, self.content, i18n.t("instructor_report_title"))
         bsizer.Add(W.action_button(banner, i18n.t("export_csv"), on_click=self._export_csv), 0, wx.ALL, 4)
         self.content.AddStretchSpacer(1)
         self.finish_layout()
@@ -632,14 +747,14 @@ class InstructorPanel(BasePanel):
     def _add_user(self) -> None:
         name = self._name.GetValue().strip() if self._name is not None else ""
         if not name:
-            W.informational(self, i18n.t("add_user"), "أدخل الاسم أولًا.")
+            W.informational(self, i18n.t("add_user"), i18n.t("instructor_name_required"))
             return
         try:
             from braille_go.data.users import UserManager
 
             UserManager(self.context.database).add_user(name)
         except Exception as exc:
-            W.informational(self, i18n.t("add_user"), f"تعذّر إضافة المستخدم: {exc}")
+            W.informational(self, i18n.t("add_user"), i18n.t("instructor_add_failed").format(error=exc))
         self.activate()
 
     def _export_csv(self) -> None:
@@ -657,9 +772,9 @@ class InstructorPanel(BasePanel):
                 writer.writerow(["Student", "Role", "Accuracy%", "CompletedLessons"])
                 for user in users:
                     writer.writerow([user.name, user.role, int(stats["accuracy"]), stats["lessons_completed"]])
-            W.informational(self, i18n.t("export_csv"), f"تم التصدير إلى:\n{path}")
+            W.informational(self, i18n.t("export_csv"), i18n.t("instructor_exported").format(path=path))
         except Exception as exc:
-            W.informational(self, i18n.t("export_csv"), f"تعذّر التصدير: {exc}")
+            W.informational(self, i18n.t("export_csv"), i18n.t("instructor_export_failed").format(error=exc))
 
     def focus_edit_box(self) -> bool:
         if self._name is not None:
@@ -745,7 +860,7 @@ class AlphabetPanel(BasePanel):
 
 
 # ----------------------------------------------------------------------
-# المساعدة
+# المساعدة (تتضمّن دليلًا تعريفيًا بطريقة برايل وتاريخها)
 # ----------------------------------------------------------------------
 class HelpPanel(BasePanel):
     def activate(self, **kwargs) -> None:
@@ -757,23 +872,22 @@ class HelpPanel(BasePanel):
         asizer.Add(W.wrapped_text(about, i18n.t("who_for") + ": " + i18n.t("who_for_desc")), 0, wx.EXPAND | wx.ALL, 4)
         asizer.Add(W.wrapped_text(about, i18n.t("importance") + ": " + i18n.t("importance_desc")), 0, wx.EXPAND | wx.ALL, 4)
 
-        start, ssizer = W.card(self, self.content, "كيف تبدأ")
-        ssizer.Add(W.wrapped_text(
-            start,
-            "1. ابدأ من الدروس والمستويات ثم اختر أول درس.\n"
-            "2. اقرأ نص السؤال داخل صندوق الكتابة (يمكنك الرجوع إليه بـ Ctrl+E).\n"
-            "3. أجِب: اختر خيارًا، أو اكتب في حقل الإجابة، أو حدّد النقاط بالأرقام 1-6.\n"
-            "4. اضغط مفتاح الإدخال (Enter) للتأكيد، ثم Enter مرة أخرى للسؤال التالي.\n"
-            "5. يُفتح المستوى التالي بعد تحقيق نسبة الإتقان المطلوبة.",
-        ), 0, wx.EXPAND | wx.ALL, 4)
+        # دليل تعريفي بطريقة برايل: ما هي، أهميتها عالميًا، وتاريخ تطوّرها.
+        self.content.Add(W.heading(self, i18n.t("braille_guide"), self.theme), 0, wx.ALL, 8)
+        what, what_sizer = W.card(self, self.content, i18n.t("braille_what"))
+        what_sizer.Add(W.wrapped_text(what, i18n.t("braille_what_text")), 0, wx.EXPAND | wx.ALL, 4)
 
-        access, access_sizer = W.card(self, self.content, "إمكانية الوصول وقارئات الشاشة")
-        access_sizer.Add(W.wrapped_text(
-            access,
-            "التطبيق مبني على عناصر wxPython الأصلية في Windows ليقرأها NVDA وWindows Narrator "
-            "بشكل موثوق. نص السؤال داخل صندوق كتابة قابل للتركيز بالكامل، وكل زر له اسم واضح. "
-            "وإذا لم يتوفّر صوت عربي يبقى التطبيق قابلًا للاستخدام بالكامل.",
-        ), 0, wx.EXPAND | wx.ALL, 4)
+        imp, imp_sizer = W.card(self, self.content, i18n.t("braille_importance"))
+        imp_sizer.Add(W.wrapped_text(imp, i18n.t("braille_importance_text")), 0, wx.EXPAND | wx.ALL, 4)
+
+        hist, hist_sizer = W.card(self, self.content, i18n.t("braille_history"))
+        hist_sizer.Add(W.wrapped_text(hist, i18n.t("braille_history_text")), 0, wx.EXPAND | wx.ALL, 4)
+
+        start, ssizer = W.card(self, self.content, i18n.t("how_to_start"))
+        ssizer.Add(W.wrapped_text(start, i18n.t("how_to_start_text")), 0, wx.EXPAND | wx.ALL, 4)
+
+        access, access_sizer = W.card(self, self.content, i18n.t("a11y_title"))
+        access_sizer.Add(W.wrapped_text(access, i18n.t("a11y_text")), 0, wx.EXPAND | wx.ALL, 4)
 
         self.content.AddStretchSpacer(1)
         self.finish_layout()
@@ -782,31 +896,31 @@ class HelpPanel(BasePanel):
 # ----------------------------------------------------------------------
 # الاختصارات
 # ----------------------------------------------------------------------
-#: (الاختصار، الوصف) لعرضها في شاشة الاختصارات وفي القوائم.
+#: (الاختصار، مفتاح الوصف في i18n) لعرضها في شاشة الاختصارات وفي القوائم.
 SHORTCUTS: tuple[tuple[str, str], ...] = (
-    ("Ctrl+E", "الانتقال إلى مربع السؤال/الإجابة"),
-    ("Enter", "تأكيد الإجابة ثم الانتقال للسؤال التالي"),
-    ("Ctrl+N", "السؤال التالي"),
-    ("Ctrl+R", "إعادة النطق"),
-    ("Ctrl+1 … Ctrl+6", "تبديل النقطة 1 إلى 6 داخل خلية برايل"),
-    ("Ctrl+Delete", "مسح النقاط/الإجابة"),
-    ("Ctrl+B", "نص عريض"),
-    ("Ctrl+Shift+D", "إظهار/إخفاء أرقام النقاط"),
-    ("Ctrl+Shift+M", "تبديل نمط العرض"),
-    ("Ctrl+= / Ctrl+-", "تكبير/تصغير الخط"),
-    ("Ctrl+H", "الشاشة الرئيسية"),
-    ("Ctrl+L", "الدروس والمستويات"),
-    ("Ctrl+Shift+A", "دليل الحروف والأرقام (النطق)"),
-    ("Ctrl+T", "التدريب"),
-    ("Ctrl+X", "الاختبارات"),
-    ("Ctrl+W", "مراجعة الأخطاء"),
-    ("Ctrl+P", "متابعة التقدّم"),
-    ("Ctrl+I", "وضع المدرب"),
-    ("Ctrl+,", "الإعدادات"),
-    ("F1", "المساعدة"),
-    ("Shift+F1", "قائمة الاختصارات"),
-    ("Alt+1 … Alt+9", "الانتقال السريع بين الشاشات"),
-    ("Ctrl+Q", "خروج"),
+    ("Ctrl+E", "sc_goto_question"),
+    ("Enter", "sc_confirm"),
+    ("Ctrl+N", "sc_next"),
+    ("Ctrl+R", "sc_repeat"),
+    ("Ctrl+1 … Ctrl+6", "sc_dots"),
+    ("Ctrl+Delete", "sc_clear"),
+    ("Ctrl+B", "sc_bold"),
+    ("Ctrl+Shift+D", "sc_toggle_dots"),
+    ("Ctrl+Shift+M", "sc_mode"),
+    ("Ctrl+= / Ctrl+-", "sc_font"),
+    ("Ctrl+H", "sc_home"),
+    ("Ctrl+L", "sc_lessons"),
+    ("Ctrl+Shift+A", "sc_alphabet"),
+    ("Ctrl+T", "sc_practice"),
+    ("Ctrl+X", "sc_exams"),
+    ("Ctrl+W", "sc_review"),
+    ("Ctrl+P", "sc_progress"),
+    ("Ctrl+I", "sc_instructor"),
+    ("Ctrl+,", "sc_settings"),
+    ("F1", "sc_help"),
+    ("Shift+F1", "sc_shortcuts"),
+    ("Alt+1 … Alt+9", "sc_alt_nav"),
+    ("Ctrl+Q", "sc_quit"),
 )
 
 
@@ -818,12 +932,12 @@ class ShortcutsPanel(BasePanel):
 
         panel, sizer = W.card(self, self.content, i18n.t("shortcuts"))
         table = wx.ListCtrl(panel, style=wx.LC_REPORT | wx.LC_SINGLE_SEL)
-        table.InsertColumn(0, "الاختصار", width=200)
-        table.InsertColumn(1, "الوظيفة", width=420)
-        for index, (keys, description) in enumerate(SHORTCUTS):
+        table.InsertColumn(0, i18n.t("shortcuts_col_key"), width=200)
+        table.InsertColumn(1, i18n.t("shortcuts_col_desc"), width=420)
+        for index, (keys, description_key) in enumerate(SHORTCUTS):
             table.InsertItem(index, keys)
-            table.SetItem(index, 1, description)
-        table.SetName("جدول اختصارات لوحة المفاتيح")
+            table.SetItem(index, 1, i18n.t(description_key))
+        table.SetName(i18n.t("shortcuts_table_name"))
         sizer.Add(table, 1, wx.EXPAND | wx.ALL, 4)
         self.content.AddStretchSpacer(1)
         self.finish_layout()

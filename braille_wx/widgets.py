@@ -50,7 +50,14 @@ def wrapped_text(parent: wx.Window, text: str, width: int = 720) -> wx.StaticTex
     return label
 
 
-def card(parent: wx.Window, container: wx.Sizer, title: str = "", theme=None) -> tuple[wx.Panel, wx.Sizer]:
+def card(
+    parent: wx.Window,
+    container: wx.Sizer,
+    title: str = "",
+    theme=None,
+    *,
+    proportion: int = 0,
+) -> tuple[wx.Panel, wx.Sizer]:
     """أنشئ بطاقة (لوحة بإطار) وأضِفها إلى الحاوية، وأعد (اللوحة، المحتوى)."""
     if title:
         box = wx.StaticBox(parent, label=title)
@@ -59,10 +66,12 @@ def card(parent: wx.Window, container: wx.Sizer, title: str = "", theme=None) ->
     else:
         panel = wx.Panel(parent)
         outer = wx.BoxSizer(wx.VERTICAL)
+    #: تُلوَّن البطاقة بلون «السطح» لتمييزها بصريًا عن خلفية الشاشة.
+    panel._surface = True
     outer.Add(panel, 1, wx.EXPAND | wx.ALL, 6)
     inner = wx.BoxSizer(wx.VERTICAL)
     panel.SetSizer(inner)
-    container.Add(outer, 0, wx.EXPAND | wx.ALL, 6)
+    container.Add(outer, proportion, wx.EXPAND | wx.ALL, 6)
     return panel, inner
 
 

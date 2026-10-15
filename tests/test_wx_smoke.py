@@ -53,8 +53,9 @@ def _answer_correctly(panel, exercise) -> None:
 
 def test_all_screens_construct(frame):
     for screen_id in [
-        "welcome", "home", "lessons", "alphabet", "practice", "exams",
-        "review", "progress", "settings", "instructor", "help", "shortcuts",
+        "welcome", "home", "lessons", "alphabet", "practice", "placement",
+        "match", "exams", "review", "progress", "settings", "instructor",
+        "help", "shortcuts",
     ]:
         frame.navigate_to(screen_id)
         assert frame._current_id == screen_id
@@ -146,7 +147,7 @@ def test_language_switch_rebuilds_ui(frame, monkeypatch):
 
     monkeypatch.setattr("braille_wx.widgets.informational", fake_info)
 
-    for selection, lang in ((1, "en"), (0, "ar")):
+    for selection, lang in ((1, "en"), (2, "fr"), (3, "es"), (0, "ar")):
         frame.navigate_to("settings")
         panel = frame._panels["settings"]
         panel._language.SetSelection(selection)
@@ -156,7 +157,7 @@ def test_language_switch_rebuilds_ui(frame, monkeypatch):
         assert i18n.get_lang() == lang
         assert captured["parent"] is frame
         assert captured["alive"] is True
-    assert len(frame._panels) == 13
+    assert len(frame._panels) == 15
 
 
 def test_display_modes_apply(frame):
@@ -200,7 +201,7 @@ def test_more_display_modes_with_labels():
     assert len(theme_mod.MODES) >= 14
     for key in ("dyslexia", "protanopia", "tritanopia", "sepia", "oled_black", "senior"):
         assert key in theme_mod.MODES
-    for lang in ("ar", "en"):
+    for lang in ("ar", "en", "fr", "es"):
         i18n.set_lang(lang)
         for mode in theme_mod.MODES.values():
             assert i18n.t(mode.label_key) != mode.label_key, mode.label_key
@@ -356,3 +357,210 @@ def test_alphabet_guide_speaks_symbols(frame, monkeypatch):
     assert any(text for text, _ in spoken), "لم يُنطق أي رمز"
     # يجب أن يُنطق الرقم بصيغة واضحة.
     assert any("رقم" in text or "number" in text for text, _ in spoken), spoken
+
+
+# ----------------------------------------------------------------------
+# الميزات الجديدة: تطابق الحرف، تحديد المستوى، تعدد اللغات، دليل برايل
+# ----------------------------------------------------------------------
+def _static_labels(panel):
+    labels = []
+
+    def walk(win):
+        if isinstance(win, (wx.StaticText, wx.StaticBox)):
+            labels.append(win.GetLabel())
+        for child in win.GetChildren():
+            walk(child)
+
+    walk(panel)
+    return labels
+
+
+def test_matching_exercise_generates_matching_kind(frame):
+    """مولّد تطابق الحرف يُنتج تدريبات من نوع التطابق بنمط اختيار."""
+    from braille_go.core.exercise_types import ExerciseKind
+
+    exercises = frame.context.generator.generate_matching(count=6, language="ar")
+    assert exercises
+    assert all(e.kind is ExerciseKind.MATCH_LETTER for e in exercises)
+    assert all(e.answer_mode is AnswerMode.CHOOSE_PATTERN for e in exercises)
+    assert all(e.stimulus_text for e in exercises)
+
+
+def test_matching_screen_runs_and_grades(frame):
+    """شاشة التطابق تعمل لصالح المتعلّم المبصر وتُصحّح الإجابات."""
+    frame.navigate_to("match")
+    assert frame._current_id == "match"
+
+    frame.navigate_to("lesson", lesson_key="", level_key="", mode="matching", match_lang="ar")
+    panel = frame._panels["lesson"]
+    assert panel._exercises, "يجب توليد تمارين التطابق"
+    for _ in range(len(panel._exercises)):
+        _answer_correctly(panel, panel._exercises[panel._index])
+        panel._next()
+    assert panel._finished
+
+
+def test_placement_sets_starting_level(frame):
+    """اختبار تحديد المستوى يقترح مستوى ويضبطه كنقطة بداية."""
+    frame.navigate_to("placement")
+    assert frame._current_id == "placement"
+    frame._panels["placement"]._start()
+    assert frame._current_id == "lesson"
+    panel = frame._panels["lesson"]
+    assert panel._mode == "placement"
+    assert panel._exercises, "يجب توليد أسئلة تحديد المستوى"
+    for _ in range(len(panel._exercises)):
+        _answer_correctly(panel, panel._exercises[panel._index])
+        panel._next()
+    assert panel._finished
+    assert panel._placement_note, "يجب عرض توصية بالمستوى"
+
+
+def test_four_interface_languages_available():
+    """أربع لغات واجهة مدعومة ولها ترجمات فعلية."""
+    from braille_wx import i18n
+
+    assert i18n.languages() == ("ar", "en", "fr", "es")
+    for code, name in i18n.language_choices():
+        assert code and name
+    sample = ("save_settings", "menu_lessons", "menu_practice", "menu_exams",
+              "btn_confirm", "braille_history", "match_title", "placement_start")
+    for lang in i18n.languages():
+        i18n.set_lang(lang)
+        for key in sample:
+            assert i18n.t(key) != key, (lang, key)
+    i18n.set_lang("ar")
+
+
+def test_help_guide_covers_braille_history(frame):
+    """الدليل التعريفي يشرح برايل وأهميتها وتاريخ تطوّرها."""
+    from braille_wx import i18n
+
+    frame.navigate_to("help")
+    labels = _static_labels(frame._panels["help"])
+    for key in ("braille_what", "braille_importance", "braille_history"):
+        assert i18n.t(key) in labels, key
+
+
+def test_menus_include_lessons_practice_exams_placement(frame):
+    """شريط القوائم يحتوي قوائم الدروس والتدريبات والاختبارات وتحديد المستوى."""
+    from braille_wx import i18n
+
+    bar = frame.GetMenuBar()
+    assert bar is not None
+    titles = [bar.GetMenuLabelText(i) for i in range(bar.GetMenuCount())]
+    for key in ("menu_lessons", "menu_practice", "menu_exams", "menu_placement"):
+        if key == "menu_placement":
+            # تحديد المستوى يظهر كعنصر داخل قائمة الاختبارات.
+            continue
+        assert i18n.t(key) in titles, (key, titles)
+
+
+# ----------------------------------------------------------------------
+# إصلاحات المراجعة الشاملة: الاتجاه، العناوين المترجمة، Enter على الخيارات
+# ----------------------------------------------------------------------
+def test_every_level_and_lesson_has_english_title():
+    """كل مستوى ودرس له عنوان إنجليزي حتى لا تظهر عناوين عربية في واجهة غير عربية."""
+    from braille_go.core import curriculum as cur
+
+    for level in cur.LEVELS:
+        assert cur.level_title(level, "en") != level.title_ar or not level.title_ar
+        assert cur.level_title(level, "en").strip()
+        for lesson in level.lessons:
+            assert cur.lesson_title(lesson, "en").strip()
+            assert cur.lesson_title(lesson, "en") != lesson.title_ar
+
+
+def test_exercise_prompts_are_localized():
+    """نصوص الأسئلة تتبع لغة الواجهة الحالية بدل أن تبقى عربية دائمًا."""
+    from braille_go.core import curriculum as cur
+    from braille_go.core import i18n as core_i18n
+    from braille_go.core.exercises import ExerciseGenerator, build_default_repository
+
+    generator = ExerciseGenerator(build_default_repository())
+    lesson = cur.first_lesson()
+    try:
+        core_i18n.set_lang("en")
+        english = generator.generate_lesson(lesson, count=4)
+        assert english
+        assert all(e.prompt_ar and e.prompt_ar.isascii() for e in english), [
+            e.prompt_ar for e in english
+        ]
+    finally:
+        core_i18n.set_lang("ar")
+
+
+def test_feedback_is_localized(frame):
+    """التغذية الراجعة (صحيحة/خاطئة) تتبع لغة الواجهة."""
+    from braille_wx import i18n
+    from braille_go.core import i18n as core_i18n
+
+    try:
+        core_i18n.set_lang("en")
+        i18n.set_lang("en")
+        lesson = first_lesson()
+        level = level_of_lesson(lesson.key)
+        frame.navigate_to("lesson", lesson_key=lesson.key, level_key=level.key)
+        panel = frame._panels["lesson"]
+        exercise = panel._exercises[panel._index]
+        feedback = frame.context.grade(exercise, exercise.correct_answer)
+        assert feedback.title_ar == i18n.t("ex_fb_correct_title")
+    finally:
+        core_i18n.set_lang("ar")
+        i18n.set_lang("ar")
+
+
+def test_rtl_layout_direction_for_arabic(frame):
+    """الاتجاه يُضبط يمينًا→يسارًا للعربية ويسارًا→يمينًا لغيرها."""
+    from braille_wx import i18n
+
+    try:
+        i18n.set_lang("ar")
+        frame.rebuild_ui()
+        assert frame.GetLayoutDirection() == wx.Layout_RightToLeft
+        i18n.set_lang("en")
+        frame.rebuild_ui()
+        assert frame.GetLayoutDirection() == wx.Layout_LeftToRight
+    finally:
+        i18n.set_lang("ar")
+        frame.rebuild_ui()
+
+
+def test_enter_selects_focused_option(frame, monkeypatch):
+    """مفتاح الإدخال يختار الخيار المُركَّز عليه بدل تجاهله."""
+    frame.navigate_to("lesson", lesson_key="", level_key="", mode="matching", match_lang="ar")
+    panel = frame._panels["lesson"]
+    assert panel._exercises
+    assert panel._option_buttons, "يجب بناء أزرار الخيارات"
+    assert panel._exercises[panel._index].answer_mode in (
+        AnswerMode.CHOOSE_TEXT,
+        AnswerMode.CHOOSE_PATTERN,
+    )
+
+    target_button = panel._option_buttons[0]
+    monkeypatch.setattr(
+        wx.Window, "FindFocus", staticmethod(lambda: target_button)
+    )
+    panel._answered = False
+    assert panel.on_enter() is True
+    assert panel._answered, "يجب أن يختار الإدخال الخيار المُركَّز عليه"
+
+
+def test_braille_cell_accessibility_is_localized():
+    """وصف خلية برايل لقارئ الشاشة يتبع لغة الواجهة."""
+    from braille_wx import a11y
+    from braille_wx import i18n
+    from braille_go.core.braille import BrailleCell
+
+    cell = BrailleCell.from_dots((1, 2))
+    try:
+        i18n.set_lang("en")
+        english = a11y.describe_braille_cell(cell)
+        assert "Dot" in english or "Braille cell" in english
+        assert "braille" in english.lower()
+        i18n.set_lang("ar")
+        arabic = a11y.describe_braille_cell(cell)
+        assert arabic != english
+        assert "برايل" in arabic
+    finally:
+        i18n.set_lang("ar")

@@ -15,7 +15,8 @@ from enum import Enum
 from typing import Iterable, Sequence
 
 from . import braille_text as bt
-from .braille import BrailleCell, cells_to_unicode, describe_difference_ar
+from . import i18n as _i18n
+from .braille import BrailleCell, cells_to_unicode, differing_dots
 from .curriculum import Lesson, _SIMILAR_PAIRS  # noqa: F401  (pairs reused by review)
 from .exercise_types import AnswerMode, ExerciseKind
 from .symbols import BrailleSymbol, SymbolCategory, SymbolRepository, build_default_repository
@@ -81,6 +82,49 @@ def _normalise_text(value: str, language: str = "ar") -> str:
     if language == "ar":
         text = "".join(ch for ch in text if not ("\u064b" <= ch <= "\u0652"))
     return text
+
+
+# ----------------------------------------------------------------------
+# أدوات النصوص متعدّدة اللغات (الأسئلة والتغذية الراجعة)
+# ----------------------------------------------------------------------
+def _t(key: str, **kwargs) -> str:
+    """نصّ مترجم من نظام الترجمة الأساسي (يتبع لغة الواجهة الحالية)."""
+    return _i18n.t(key, **kwargs)
+
+
+def _sep() -> str:
+    """الفاصل بين العناصر (فاصلة عربية أو لاتينية حسب اللغة)."""
+    return _i18n.t("ex_separator")
+
+
+def _dots_label(dots: Sequence[int]) -> str:
+    """تمثيل نصّي لنقاط برايل بفاصل مناسب للغة."""
+    ordered = sorted(int(d) for d in dots)
+    return _sep().join(str(d) for d in ordered) or _t("ex_blank")
+
+
+def _symbol_name(symbol: BrailleSymbol) -> str:
+    """اسم الرمز بلغة الواجهة إن توفّر، وإلا فالعربية."""
+    if _i18n.get_lang() != "ar" and symbol.name_en:
+        return symbol.name_en
+    return symbol.name_ar
+
+
+def _symbol_dots(symbol: BrailleSymbol) -> str:
+    return symbol.dots_text() or _t("ex_blank")
+
+
+def _difference(a: BrailleCell, b: BrailleCell) -> str:
+    """اشرح بلغة الواجهة الفرق بين الخلية ``a`` والمتوقّعة ``b``."""
+    missing, extra = differing_dots(a, b)
+    parts: list[str] = []
+    if missing:
+        parts.append(_t("ex_diff_missing", dots=_sep().join(str(d) for d in missing)))
+    if extra:
+        parts.append(_t("ex_diff_extra", dots=_sep().join(str(d) for d in extra)))
+    if not parts:
+        return _t("ex_diff_same")
+    return _sep().join(parts)
 
 
 def _dot_distance(a: BrailleSymbol, b: BrailleSymbol) -> int:
@@ -184,8 +228,8 @@ class ExerciseGenerator:
             return []
         lesson = Lesson(
             key=lesson_key,
-            title_ar="مراجعة الرموز المتكررة الخطأ",
-            description_ar="تدريبات مركّزة على الرموز التي تحتاج إلى مراجعة.",
+            title_ar=_t("ex_review_title"),
+            description_ar=_t("ex_review_desc"),
             symbol_keys=tuple(s.key for s in symbols),
             exercise_kinds=(
                 ExerciseKind.IDENTIFY_CHAR,
@@ -227,9 +271,32 @@ class ExerciseGenerator:
                 return self._word_exercise(lesson, index, build=False)
             if kind is ExerciseKind.READ_SENTENCE:
                 return self._sentence_exercise(lesson, index)
+            if kind is ExerciseKind.MATCH_LETTER and symbols:
+                return self._match_letter(lesson, index, symbols)
         except (KeyError, ValueError, IndexError):
             return None
         return None
+
+    def generate_matching(self, count: int = 8, language: str = "ar") -> list[Exercise]:
+        """ولّد تدريبات تطابق الحرف المطبوع مع نمط برايل.
+
+        تُستخدم خصوصًا للمتعلّم المبصر ليربط بين شكل الحرف المطبوع ونمط
+        برايل الخاص به.
+        """
+        category = SymbolCategory.LETTER_EN if language == "en" else SymbolCategory.LETTER_AR
+        letters = self.repo.by_category(category)
+        if not letters:
+            return []
+        lesson = Lesson(
+            key=f"matching_{language}",
+            title_ar=_t("ex_match_lesson_title"),
+            description_ar=_t("ex_match_lesson_desc"),
+            symbol_keys=tuple(s.key for s in letters),
+            exercise_kinds=(ExerciseKind.MATCH_LETTER,),
+            language=language,
+            exercise_count=count,
+        )
+        return self.generate_lesson(lesson, count=count)
 
     # ------------------------------------------------------------------
     # Generators
@@ -237,16 +304,16 @@ class ExerciseGenerator:
     def _build_from_description(self, lesson: Lesson, index: int) -> Exercise:
         size = self.rng.randint(1, 4)
         dots = sorted(self.rng.sample(range(1, 7), size))
-        dots_text = "، ".join(str(d) for d in dots)
+        dots_text = _dots_label(dots)
         return Exercise(
             key=f"{lesson.key}:build_desc:{index}:{'-'.join(map(str, dots))}",
             kind=ExerciseKind.BUILD_FROM_DESCRIPTION,
             lesson_key=lesson.key,
-            prompt_ar=f"كوّن الخلية بتحديد النقاط التالية: {dots_text}",
+            prompt_ar=_t("ex_prompt_build_desc", dots=dots_text),
             answer_mode=AnswerMode.BUILD_CELL,
             correct_answer="-".join(map(str, dots)),
             correct_dots=tuple(dots),
-            explanation_ar=f"الإجابة الصحيحة هي تحديد النقاط: {dots_text}.",
+            explanation_ar=_t("ex_explain_build_desc", dots=dots_text),
             hint_ar="استخدم مفاتيح الأرقام 1 إلى 6 لتبديل النقاط.",
         )
 
@@ -259,16 +326,19 @@ class ExerciseGenerator:
             key=f"{lesson.key}:ident:{index}:{symbol.key}",
             kind=ExerciseKind.IDENTIFY_CHAR,
             lesson_key=lesson.key,
-            prompt_ar="ما الرمز الذي يمثّله نمط برايل المعروض؟",
+            prompt_ar=_t("ex_prompt_identify"),
             answer_mode=AnswerMode.CHOOSE_TEXT,
             language=symbol.language,
             stimulus_braille=symbol.full_unicode(),
             options=tuple(options),
             correct_answer=symbol.char,
             symbol_keys=(symbol.key,),
-            explanation_ar=(
-                f"النمط {symbol.full_unicode()} يمثّل «{symbol.char}» "
-                f"({symbol.name_ar})، ونقاطه {symbol.dots_text() or 'لا نقاط'}."
+            explanation_ar=_t(
+                "ex_explain_identify",
+                pattern=symbol.full_unicode(),
+                char=symbol.char,
+                name=_symbol_name(symbol),
+                dots=_symbol_dots(symbol),
             ),
             hint_ar="تذكّر ترتيب النقاط: 1 و4 في الأعلى، 2 و5 في الوسط، 3 و6 في الأسفل.",
         )
@@ -279,12 +349,12 @@ class ExerciseGenerator:
         candidates = [symbol, *distractors]
         self.rng.shuffle(candidates)
         option_patterns = tuple((s.cell,) for s in candidates)
-        option_labels = tuple(s.dots_text() or "فراغ" for s in candidates)
+        option_labels = tuple(_symbol_dots(s) for s in candidates)
         return Exercise(
             key=f"{lesson.key}:pattern:{index}:{symbol.key}",
             kind=ExerciseKind.IDENTIFY_PATTERN,
             lesson_key=lesson.key,
-            prompt_ar=f"اختر نمط برايل المطابق للرمز «{symbol.char}».",
+            prompt_ar=_t("ex_prompt_choose_pattern", char=symbol.char),
             answer_mode=AnswerMode.CHOOSE_PATTERN,
             language=symbol.language,
             stimulus_text=symbol.char,
@@ -292,12 +362,14 @@ class ExerciseGenerator:
             options=option_labels,
             option_patterns=option_patterns,
             option_labels=option_labels,
-            correct_answer=symbol.dots_text() or "فراغ",
+            correct_answer=_symbol_dots(symbol),
             correct_dots=symbol.dots,
             symbol_keys=(symbol.key,),
-            explanation_ar=(
-                f"الرمز «{symbol.char}» يُكتب بالنقاط {symbol.dots_text() or 'بلا نقاط'} "
-                f"أي {symbol.full_unicode()}."
+            explanation_ar=_t(
+                "ex_explain_choose_pattern",
+                char=symbol.char,
+                dots=_symbol_dots(symbol),
+                pattern=symbol.full_unicode(),
             ),
         )
 
@@ -307,17 +379,19 @@ class ExerciseGenerator:
             key=f"{lesson.key}:build:{index}:{symbol.key}",
             kind=ExerciseKind.BUILD_PATTERN,
             lesson_key=lesson.key,
-            prompt_ar=f"كوّن نمط برايل للرمز «{symbol.char}».",
+            prompt_ar=_t("ex_prompt_build_pattern", char=symbol.char),
             answer_mode=AnswerMode.BUILD_CELL,
             language=symbol.language,
             stimulus_text=symbol.char,
             show_target_text=True,
-            correct_answer=symbol.dots_text() or "فراغ",
+            correct_answer=_symbol_dots(symbol),
             correct_dots=symbol.dots,
             symbol_keys=(symbol.key,),
-            explanation_ar=(
-                f"الرمز «{symbol.char}» ({symbol.name_ar}) يُكتب بالنقاط "
-                f"{symbol.dots_text() or 'بلا نقاط'}."
+            explanation_ar=_t(
+                "ex_explain_build_pattern",
+                char=symbol.char,
+                name=_symbol_name(symbol),
+                dots=_symbol_dots(symbol),
             ),
             hint_ar="حدّد النقاط واحدة واحدة، ثم اضغط «تأكيد الإجابة».",
         )
@@ -328,14 +402,17 @@ class ExerciseGenerator:
             key=f"{lesson.key}:type:{index}:{symbol.key}",
             kind=ExerciseKind.TYPE_ANSWER,
             lesson_key=lesson.key,
-            prompt_ar="اقرأ نمط برايل ثم اكتب الرمز المقابل له في الحقل.",
+            prompt_ar=_t("ex_prompt_type"),
             answer_mode=AnswerMode.TYPE_TEXT,
             language=symbol.language,
             stimulus_braille=symbol.full_unicode(),
             correct_answer=symbol.char,
             symbol_keys=(symbol.key,),
-            explanation_ar=(
-                f"النمط {symbol.full_unicode()} يمثّل «{symbol.char}» ({symbol.name_ar})."
+            explanation_ar=_t(
+                "ex_explain_type",
+                pattern=symbol.full_unicode(),
+                char=symbol.char,
+                name=_symbol_name(symbol),
             ),
             hint_ar="يمكنك أيضًا استخدام الخلية التفاعلية لتكوين النمط والتحقق من نفسك.",
         )
@@ -356,19 +433,21 @@ class ExerciseGenerator:
             key=f"{lesson.key}:disc:{index}:{target.key}:{confusable.key}",
             kind=ExerciseKind.DISCRIMINATE,
             lesson_key=lesson.key,
-            prompt_ar=(
-                "انتبه: الخيارات متشابهة. ما هذا النمط؟"
-            ),
+            prompt_ar=_t("ex_prompt_discriminate"),
             answer_mode=AnswerMode.CHOOSE_TEXT,
             language=target.language,
             stimulus_braille=target.full_unicode(),
             options=tuple(options),
             correct_answer=target.char,
             symbol_keys=(target.key, confusable.key),
-            explanation_ar=(
-                f"النمط {target.full_unicode()} هو «{target.char}» بالنقاط "
-                f"{target.dots_text()}، بينما «{confusable.char}» هو النقاط "
-                f"{confusable.dots_text()} ({confusable.full_unicode()})."
+            explanation_ar=_t(
+                "ex_explain_discriminate",
+                pattern=target.full_unicode(),
+                char=target.char,
+                dots=target.dots_text(),
+                other=confusable.char,
+                otherdots=confusable.dots_text(),
+                otherpattern=confusable.full_unicode(),
             ),
             hint_ar="ركّز على النقاط التي تختلف فيها الخليتان فقط.",
         )
@@ -386,16 +465,18 @@ class ExerciseGenerator:
             key=f"{lesson.key}:num:{index}:{symbol.key}",
             kind=ExerciseKind.NUMBER_EXERCISE,
             lesson_key=lesson.key,
-            prompt_ar="علامة الرقم ⠼ تسبق الأرقام. ما الرقم المعروض؟",
+            prompt_ar=_t("ex_prompt_number"),
             answer_mode=AnswerMode.CHOOSE_TEXT,
             language="ar",
             stimulus_braille=symbol.full_unicode(),
             options=tuple(options),
             correct_answer=symbol.char,
             symbol_keys=(symbol.key, "sym_number_sign"),
-            explanation_ar=(
-                f"العلامة ⠼ تعني أن ما بعدها رقم، والنقاط {symbol.dots_text()} "
-                f"تعني «{symbol.char}». النمط الكامل {symbol.full_unicode()}."
+            explanation_ar=_t(
+                "ex_explain_number",
+                dots=symbol.dots_text(),
+                char=symbol.char,
+                pattern=symbol.full_unicode(),
             ),
             hint_ar="اقرأ أولًا ⠼ (النقاط 3-4-5-6) ثم اقرأ الخلية التالية.",
         )
@@ -411,17 +492,20 @@ class ExerciseGenerator:
             key=f"{lesson.key}:punct:{index}:{symbol.key}",
             kind=ExerciseKind.PUNCTUATION_EXERCISE,
             lesson_key=lesson.key,
-            prompt_ar=f"ما علامة الترقيم التي يمثّلها النمط {symbol.full_unicode()}؟",
+            prompt_ar=_t("ex_prompt_punct", pattern=symbol.full_unicode()),
             answer_mode=AnswerMode.CHOOSE_TEXT,
             language=symbol.language,
             stimulus_braille=symbol.full_unicode(),
             options=tuple(options),
             correct_answer=symbol.char,
             symbol_keys=(symbol.key,),
-            explanation_ar=(
-                f"«{symbol.char}» ({symbol.name_ar}) تُكتب بالنقاط "
-                f"{symbol.dots_text()}. {symbol.notes_ar}".strip()
-            ),
+            explanation_ar=_t(
+                "ex_explain_punct",
+                char=symbol.char,
+                name=_symbol_name(symbol),
+                dots=symbol.dots_text(),
+                notes=symbol.notes_ar if _i18n.get_lang() == "ar" else "",
+            ).strip(),
             hint_ar="تذكّر أن أنظمة الترقيم تختلف بين العربية والإنجليزية.",
         )
 
@@ -434,7 +518,7 @@ class ExerciseGenerator:
                 key=f"{lesson.key}:buildword:{index}:{word}",
                 kind=ExerciseKind.BUILD_WORD,
                 lesson_key=lesson.key,
-                prompt_ar=f"كوّن الكلمة «{word}» باستخدام خلايا برايل، حرفًا حرفًا.",
+                prompt_ar=_t("ex_prompt_build_word", word=word),
                 answer_mode=AnswerMode.BUILD_CELLS,
                 language=lesson.language,
                 stimulus_text=word,
@@ -442,8 +526,8 @@ class ExerciseGenerator:
                 correct_answer=word,
                 correct_cells=transcription.dots,
                 letter_count=len(transcription.cells),
-                explanation_ar=(
-                    f"الكلمة «{word}» تُكتب في برايل هكذا: {transcription.unicode}."
+                explanation_ar=_t(
+                    "ex_explain_build_word", word=word, pattern=transcription.unicode
                 ),
                 hint_ar="املأ خلية لكل حرف بالترتيب من اليسار إلى اليمين.",
             )
@@ -455,14 +539,52 @@ class ExerciseGenerator:
             key=f"{lesson.key}:readword:{index}:{word}",
             kind=ExerciseKind.READ_WORD,
             lesson_key=lesson.key,
-            prompt_ar="اقرأ نمط برايل واختر الكلمة الصحيحة.",
+            prompt_ar=_t("ex_prompt_read_word"),
             answer_mode=AnswerMode.CHOOSE_TEXT,
             language=lesson.language,
             stimulus_braille=transcription.unicode,
             options=tuple(options),
             correct_answer=word,
-            explanation_ar=f"النمط {transcription.unicode} يُقرأ «{word}».",
+            explanation_ar=_t(
+                "ex_explain_read_word", pattern=transcription.unicode, word=word
+            ),
             hint_ar="اقرأ الخلايا واحدة تلو الأخرى ثم اجمع الحروف.",
+        )
+
+    def _match_letter(self, lesson: Lesson, index: int, symbols: Sequence[BrailleSymbol]) -> Exercise:
+        letters = [
+            s for s in symbols
+            if s.category in (SymbolCategory.LETTER_AR, SymbolCategory.LETTER_EN)
+        ] or list(symbols)
+        symbol = self.rng.choice(letters)
+        distractors = _choose_distractors(symbol, self.repo, self.rng, 3)
+        candidates = [symbol, *distractors]
+        self.rng.shuffle(candidates)
+        option_patterns = tuple((s.cell,) for s in candidates)
+        option_labels = tuple(_symbol_dots(s) for s in candidates)
+        return Exercise(
+            key=f"{lesson.key}:match:{index}:{symbol.key}",
+            kind=ExerciseKind.MATCH_LETTER,
+            lesson_key=lesson.key,
+            prompt_ar=_t("ex_prompt_match", char=symbol.char),
+            answer_mode=AnswerMode.CHOOSE_PATTERN,
+            language=symbol.language,
+            stimulus_text=symbol.char,
+            show_target_text=True,
+            options=option_labels,
+            option_patterns=option_patterns,
+            option_labels=option_labels,
+            correct_answer=_symbol_dots(symbol),
+            correct_dots=symbol.dots,
+            symbol_keys=(symbol.key,),
+            explanation_ar=_t(
+                "ex_explain_match",
+                char=symbol.char,
+                name=_symbol_name(symbol),
+                dots=_symbol_dots(symbol),
+                pattern=symbol.full_unicode(),
+            ),
+            hint_ar="قارن النقاط في كل خيار واختر النمط المطابق للحرف.",
         )
 
     def _sentence_exercise(self, lesson: Lesson, index: int) -> Exercise:
@@ -479,13 +601,17 @@ class ExerciseGenerator:
             key=f"{lesson.key}:sentence:{index}:{sentence}",
             kind=ExerciseKind.READ_SENTENCE,
             lesson_key=lesson.key,
-            prompt_ar="اقرأ الجملة المكتوبة بطريقة برايل واختر النص المطابق.",
+            prompt_ar=_t("ex_prompt_read_sentence"),
             answer_mode=AnswerMode.CHOOSE_TEXT,
             language=lesson.language,
             stimulus_braille=transcription.unicode,
             options=tuple(options),
             correct_answer=sentence,
-            explanation_ar=f"الجملة {transcription.unicode} تُقرأ: «{sentence}».",
+            explanation_ar=_t(
+                "ex_explain_read_sentence",
+                pattern=transcription.unicode,
+                sentence=sentence,
+            ),
             hint_ar="الفراغ في برايل يفصل بين الكلمات كما في الكتابة العادية.",
         )
 
@@ -535,8 +661,8 @@ def grade(exercise: Exercise, response: object, repository: SymbolRepository | N
         if not given:
             return Feedback(
                 correct=False,
-                title_ar="لم تُدخل إجابة",
-                message_ar="اكتب الرمز في الحقل ثم أعد المحاولة.",
+                title_ar=_t("ex_fb_no_input_title"),
+                message_ar=_t("ex_fb_no_input_msg"),
                 explanation_ar=exercise.explanation_ar,
                 expected=exercise.correct_answer,
                 given="",
@@ -557,8 +683,8 @@ def grade(exercise: Exercise, response: object, repository: SymbolRepository | N
         if index < 0 or index >= len(exercise.option_patterns):
             return Feedback(
                 correct=False,
-                title_ar="لم تُحدّد نمطًا",
-                message_ar="اختر أحد الأنماط المعروضة ثم أعد المحاولة.",
+                title_ar=_t("ex_fb_no_pattern_title"),
+                message_ar=_t("ex_fb_no_pattern_msg"),
                 explanation_ar=exercise.explanation_ar,
                 expected=exercise.correct_answer,
                 given="",
@@ -574,13 +700,13 @@ def grade(exercise: Exercise, response: object, repository: SymbolRepository | N
         correct = given_dots == tuple(sorted(exercise.correct_dots))
         diff = ""
         if not correct:
-            diff = describe_difference_ar(
+            diff = _difference(
                 BrailleCell.from_dots(given_dots),
                 BrailleCell.from_dots(exercise.correct_dots),
             )
         return _feedback_from_bool(
-            exercise, correct, "-".join(map(str, given_dots)) or "لا نقاط",
-            "-".join(map(str, exercise.correct_dots)) or "لا نقاط", detail=diff,
+            exercise, correct, "-".join(map(str, given_dots)) or _t("ex_blank"),
+            "-".join(map(str, exercise.correct_dots)) or _t("ex_blank"), detail=diff,
         )
 
     if mode is AnswerMode.BUILD_CELLS:
@@ -589,18 +715,26 @@ def grade(exercise: Exercise, response: object, repository: SymbolRepository | N
         correct = tuple(sorted(c) for c in given_cells) == expected_cells
         if not correct:
             if len(given_cells) != len(expected_cells):
-                detail = (
-                    f"عدد الخلايا غير صحيح: أدخلت {len(given_cells)} والأصل "
-                    f"{len(expected_cells)} خلية."
+                detail = _t(
+                    "ex_fb_cells_count",
+                    given=len(given_cells),
+                    expected=len(expected_cells),
                 )
             else:
                 details = []
                 for position, (given, want) in enumerate(zip(given_cells, expected_cells), start=1):
                     if tuple(sorted(given)) != tuple(sorted(want)):
                         details.append(
-                            f"الخلية {position}: {describe_difference_ar(BrailleCell.from_dots(given), BrailleCell.from_dots(want))}"
+                            _t(
+                                "ex_fb_cell_pos",
+                                n=position,
+                                detail=_difference(
+                                    BrailleCell.from_dots(given),
+                                    BrailleCell.from_dots(want),
+                                ),
+                            )
                         )
-                detail = "؛ ".join(details)
+                detail = _sep().join(details)
             return _feedback_from_bool(
                 exercise, False, _cells_plain(given_cells), _cells_plain(expected_cells), detail=detail,
             )
@@ -610,8 +744,8 @@ def grade(exercise: Exercise, response: object, repository: SymbolRepository | N
 
     return Feedback(
         correct=False,
-        title_ar="نوع إجابة غير مدعوم",
-        message_ar="تعذّر تصحيح هذه الإجابة.",
+        title_ar=_t("ex_fb_unsupported_title"),
+        message_ar=_t("ex_fb_unsupported_msg"),
         explanation_ar=exercise.explanation_ar,
     )
 
@@ -645,7 +779,7 @@ def _coerce_cells(response: object) -> tuple[tuple[int, ...], ...]:
 
 
 def _cells_plain(cells: Sequence[tuple[int, ...]]) -> str:
-    parts = ["-".join(str(d) for d in cell) or "فراغ" for cell in cells]
+    parts = ["-".join(str(d) for d in cell) or _t("ex_blank") for cell in cells]
     return " | ".join(parts)
 
 
@@ -659,19 +793,19 @@ def _feedback_from_bool(
     if correct:
         return Feedback(
             correct=True,
-            title_ar="إجابة صحيحة",
-            message_ar="أحسنت! إجابتك صحيحة.",
+            title_ar=_t("ex_fb_correct_title"),
+            message_ar=_t("ex_fb_correct_msg"),
             explanation_ar=exercise.explanation_ar,
             expected=expected,
             given=given,
         )
-    message = "الإجابة غير صحيحة."
+    message = _t("ex_fb_wrong_msg")
     if detail:
         message += " " + detail
     return Feedback(
         correct=False,
-        title_ar="إجابة غير صحيحة",
-        message_ar=message + " جرّب مرة أخرى.",
+        title_ar=_t("ex_fb_wrong_title"),
+        message_ar=message + _t("ex_fb_try_again"),
         explanation_ar=exercise.explanation_ar,
         expected=expected,
         given=given,
