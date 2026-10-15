@@ -147,8 +147,13 @@ class LessonPanel(BasePanel):
         self._show_feedback("")
         self._end_text.SetLabel("")
         self._banner.SetLabel("")
+        self._btn_next.SetLabel("السؤال التالي")
+        self._btn_next.Hide()
+        self._btn_confirm.Enable(True)
+        self._btn_clear.Enable(True)
         if self._answer_box is not None:
             self._answer_box.SetValue("")
+            self._answer_box.Enable(True)
 
         if not self._lesson:
             self._intro.SetLabel("درس غير معروف.")
@@ -228,6 +233,7 @@ class LessonPanel(BasePanel):
             self._options_panel.Hide()
 
         if ex.answer_mode is AnswerMode.TYPE_TEXT and self._answer_box is not None:
+            self._answer_box.Enable(True)
             self._answer_box.Show()
             self._btn_clear.Hide()
         elif ex.answer_mode in (AnswerMode.BUILD_CELL, AnswerMode.BUILD_CELLS):

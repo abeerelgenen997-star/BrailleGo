@@ -463,7 +463,8 @@ class SettingsPanel(BasePanel):
         else:
             self._rebuild_notice()
         self.frame.refresh_status()
-        W.informational(self, i18n.t("settings"), i18n.t("save_settings_ok"))
+        # قد تكون اللوحة أُعيد بناؤها عند تغيير اللغة، لذا نستخدم الإطار كأب آمن.
+        W.informational(self.frame, i18n.t("settings"), i18n.t("save_settings_ok"))
 
     def _rebuild_notice(self) -> None:
         self._build()
