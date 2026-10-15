@@ -1,11 +1,11 @@
 # =====================================================================
-#  Braille Go v1.3.0 — إعادة تجميع الحزم المُجزّأة والتحقق من السلامة
+#  Braille Go v1.4.0 — إعادة تجميع الحزم المُجزّأة والتحقق من السلامة
 #  Braille Go — reassemble split packages and verify integrity
 #
 #  ضع هذا الملف في نفس مجلد ملفات الأجزاء، ثم شغّله.
 #  سيُعيد تجميع كل حزمة موجودة أجزاؤها إلى ملف واحد ويتحقق من SHA-256:
 #     BrailleGo-Standalone.exe.partNN  ->  BrailleGo.exe
-#     BrailleGo-Setup-1.3.0.exe.partNN ->  BrailleGo-Setup-1.3.0.exe
+#     BrailleGo-Setup-1.4.0.exe.partNN ->  BrailleGo-Setup-1.4.0.exe
 #
 #  التشغيل:  powershell -ExecutionPolicy Bypass -File JOIN_AND_RUN.ps1
 # =====================================================================
@@ -15,16 +15,16 @@ $ErrorActionPreference = "Stop"
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $dir
 
-# بصمات SHA-256 المتوقّعة (الإصدار 1.3.0)
+# بصمات SHA-256 المتوقّعة (الإصدار 1.4.0)
 $EXPECTED = @{
-    "BrailleGo-Standalone.exe"   = "DC0D81A189898F0CEDF2607948E35C1D99E504A07752D849E6CA926F9A6F6250"
-    "BrailleGo-Setup-1.3.0.exe"  = "EB97A2F6951EB4778DB120FCA09E1D7A0DEEE65F0CE9B968B40968AFC6B842A1"
+    "BrailleGo-Standalone.exe"   = "717261A041A0215032E4FCF45F1A29F805CECCD04D0887CA419C9B94CCB99182"
+    "BrailleGo-Setup-1.4.0.exe"  = "F283AB52C960796B4A38F25EC78849C3C2D856F7605993FF2F836A5F5D1EAB8D"
 }
 
 # الاسم النهائي لكل حزمة (المفتاح = بادئة ملفات الأجزاء).
 $FINAL_NAME = @{
     "BrailleGo-Standalone.exe"  = "BrailleGo.exe"
-    "BrailleGo-Setup-1.3.0.exe" = "BrailleGo-Setup-1.3.0.exe"
+    "BrailleGo-Setup-1.4.0.exe" = "BrailleGo-Setup-1.4.0.exe"
 }
 
 function Join-Package {
@@ -81,4 +81,4 @@ if (-not $didAnything) {
 Write-Host ""
 Write-Host "تم. / Done." -ForegroundColor Green
 Write-Host "  BrailleGo.exe               : شغّله مباشرة (نسخة محمولة)."
-Write-Host "  BrailleGo-Setup-1.3.0.exe   : ثبّت البرنامج على الجهاز."
+Write-Host "  BrailleGo-Setup-1.4.0.exe   : ثبّت البرنامج على الجهاز."
