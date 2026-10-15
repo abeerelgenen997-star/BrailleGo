@@ -8,7 +8,8 @@
 
 - Python 3.14.7
 - pytest 8.4.2, pytest-qt 4.5.0
-- PySide6 6.12.0
+- wxPython 4.3.2 (اختبارات الواجهة الأساسية) + PySide6 6.12.0 (احتياطي)
+- pyttsx3 2.99 + comtypes 1.4.17
 - OS: Windows 11 (بيئة التطوير الحالية)
 
 ## أوامر التشغيل
@@ -53,37 +54,18 @@ cd C:\Users\Hamadah\Downloads\BrailleGo
 
 ## نتائج فعلية
 
-**آخر تشغيل ناجح:**
+**آخر تشغيل ناجح:** `26 passed`
 
-```
-tests/test_braille.py::test_braille_cell_basic PASSED
-tests/test_braille.py::test_unicode_roundtrip PASSED
-tests/test_braille.py::test_english_capital PASSED
-tests/test_braille.py::test_description_difference PASSED
-tests/test_braille.py::test_transcribe_mixed_digits PASSED
-tests/test_braille.py::test_empty_cell PASSED
-tests/test_exercises.py::test_grade_choose_text_correct PASSED
-tests/test_exercises.py::test_grade_build_cell PASSED
-tests/test_exercises.py::test_grade_build_cells_count PASSED
-tests/test_progress.py::test_evaluate_level PASSED
-tests/test_progress.py::test_can_advance_false PASSED
-tests/test_progress.py::test_available_levels PASSED
-tests/test_progress.py::test_overall_progress PASSED
-tests/test_progress.py::test_symbol_stats_needs_review PASSED
-tests/test_progress.py::test_progress_store_save_session PASSED
-tests/test_settings.py::test_settings_defaults PASSED
-tests/test_settings.py::test_settings_persist PASSED
-tests/test_settings.py::test_settings_coerce_bounds PASSED
-tests/test_settings.py::test_settings_reset PASSED
-
-19 passed in 0.27s
-```
+يشمل ذلك 19 اختبار وحدة (Core/Data) + 7 اختبارات دخانية لواجهة **wxPython**
+(`tests/test_wx_smoke.py`) تتحقق من بناء كل الشاشات، وتوليد التدريبات، وتركيز
+صندوق السؤال (Ctrl+E)، والتصحيح وحفظ التقدّم، وتبديل الأنماط، وحفظ الإعدادات،
+وإدارة المستخدمين. اختبارات wx تُتخطّى تلقائيًا إذا لم يكن `wxPython` مثبّتًا.
 
 ## ما تم اختباره / ما تعذّر
 
-- **نجح**: منطق برايل، تصحيح تدريبات، قواعد تقدّم، إعدادات، تخزين SQLite
-- **تعذّر جزئيًا**: اختبارات UI شاملة (pytest-qt موجود لكن لم تُكتب اختبارات smoke للـLesson/Home نظراً لوقت التركيز على الوظائف الأساسية). يمكن إضافة لاحقًا.
-- **لم يُختبر**: تشغيل EXE فعليًا داخل بيئة التطوير (PyInstaller سيُنشئ EXE لكن لم أُشغّله على Windows "نظيف" بعيدًا عن venv). تم تجهيز `BrailleGo.spec`.
+- **نجح**: منطق برايل، تصحيح تدريبات، قواعد تقدّم، إعدادات، تخزين SQLite، وبناء شاشات wx والتفاعل معها.
+- **نجح**: تشغيل الملف التنفيذي الواحد (`dist\BrailleGo.exe`) واختبار المُثبِّت (Inno Setup) تثبيتًا وإزالةً.
+- **يحتاج اختبارًا يدويًا**: قراءة فعلية عبر NVDA/Narrator على جهاز نظيف (انظر ACCESSIBILITY.md).
 
 ## تغطية مقترحة لاحقة
 

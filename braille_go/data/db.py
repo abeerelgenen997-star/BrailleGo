@@ -120,6 +120,14 @@ _SCHEMA_STATEMENTS: tuple[str, ...] = (
         updated_at TEXT NOT NULL
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS users (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        name       TEXT NOT NULL,
+        role       TEXT NOT NULL DEFAULT 'student',
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+    """,
 )
 
 

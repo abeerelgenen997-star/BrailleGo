@@ -1,5 +1,17 @@
+# Braille Go — متطلبات التشغيل
+#
+# الواجهة الأساسية تستخدم wxPython (الأفضل لقارئات الشاشة على ويندوز).
+wxPython==4.3.2
+
+# النطق (تحويل النص إلى كلام) على ويندوز عبر SAPI5.
+pyttsx3==2.99
+comtypes==1.4.17
+
+# ملاحظة: للنسخة الاحتياطية بواجهة Qt ثبّت أيضًا:
+#   PySide6-Essentials==6.12.0
+#   PySide6-Addons==6.12.0
 PySide6-Essentials==6.12.0
 PySide6-Addons==6.12.0
-pytest==8.4.2
-pytest-qt==4.5.0
+
+# أدوات البناء
 pyinstaller==6.16.0

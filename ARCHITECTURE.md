@@ -4,10 +4,12 @@
 
 Braille Go هو تطبيق سطح مكتب منفصل الطبقات (layers):
 
-- Presentation (UI): PySide6 (شاشات + خلايا برايل مخصصة)
-- Services: Speech (QtTextToSpeech), Accessibility (QAccessible)
+- Presentation (UI): الافتراضي **wxPython** (`braille_wx/`) + نسخة احتياطية PySide6 (`braille_go/ui/`)
+- Services: النطق والأصوات (`braille_wx/speech.py`, `sounds.py`) و/أو `braille_go/services`
 - Domain (Core): Braille model, Symbols, Curriculum, Exercises, Progress rules
-- Data: SQLite (settings, progress, state) مع WAL ومعاملة واحدة
+- Data: SQLite (settings, progress, state, users) مع WAL ومعاملة واحدة
+
+> ملاحظة: طبقتا **Core** و**Data** مشتركتان تمامًا بين الواجهتين (wx وQt) دون أي اعتماد على مكتبة الواجهة.
 
 ## الدوائر الأساسية
 
@@ -24,6 +26,19 @@ Braille Go هو تطبيق سطح مكتب منفصل الطبقات (layers):
 - `ui/braille_cell_widget.py`: رسم مخصص + أحداث لوحة مفاتيح (1-6, arrows, space, enter, clear) + وصف وصولي حي.
 - `ui/theme.py`: ثيم + palette + stylesheet + ألوان قابلة للتخصيص.
 - `ui/screens/*`: شاشة لكل ميزة (Home, Lessons, Lesson, Practice, Exams, Review, Progress, Settings, Help).
+
+## طبقة wxPython (الواجهة الأساسية) — `braille_wx/`
+
+- `app.py`, `__main__.py`: نقطة الدخول (تُنشئ `wx.App` و`MainFrame`).
+- `context.py`: `WxAppContext` يربط Core+Data ويوفّر إشارات (`Signal`) بدل إشارات Qt + مساعدات (توليد تدريبات، تصحيح، ملخّصات تقدّم).
+- `main_frame.py`: النافذة الرئيسية، القوائم، جدول الاختصارات، شريط الحالة، تنقّل الشاشات، تبديل الثيم واللغة.
+- `screens.py`: كل الشاشات (ترحيب، رئيسية، دروس، تدريب، اختبارات، مراجعة، تقدّم، إعدادات، مدرب، مساعدة، اختصارات).
+- `lesson_view.py`: شاشة الدرس/الاختبار/المراجعة + **صندوق السؤال القابل للقراءة** و**حقل الإجابة** وباني الخلايا المتعددة.
+- `braille_cell.py`: خلية برايل تفاعلية مرسومة + عرض متعدّد الخلايا.
+- `theme.py`: 9 أنماط عرض + `Theme` + `apply_theme_to`.
+- `speech.py`, `sounds.py`: النطق (pyttsx3) وأصوات التطبيق.
+- `a11y.py`, `widgets.py`, `base_panel.py`: مساعدات إمكانية الوصول والعناصر الشائعة والأساس للشاشات.
+- `i18n.py`: غلاف فوق `core/i18n.py` مع مفاتيح إضافية خاصة بواجهة wx.
 
 ## تدفق البيانات
 

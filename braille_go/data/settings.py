@@ -74,6 +74,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "font_scale": 1.0,
     "braille_cell_scale": 1.0,
     "theme": "light",                # light | dark
+    "display_mode": "normal_light",  # نمط عرض جاهز (انظر ui/theme في نسخة wx)
+    "bold_text": False,
+    "line_spacing": 1.0,
     "high_contrast": False,
     "reduce_motion": False,
     "text_color": "",                # فارغ = اتبع الثيم
@@ -94,6 +97,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "auto_confirm_answer": False,
     "show_dot_numbers": True,
     "interface_language": "ar",      # ar (قابل للتوسّع)
+    "guided_mode": True,             # وضع التعلم الإرشادي للمبتدئين
+    "show_large_target": True,       # عرض المطلوب تعلمه بحجم كبير
+    "welcome_shown": False,          # هل عُرضت شاشة الترحيب من قبل
     # سلوك
     "last_lesson_key": "",
     "last_level_key": "",
@@ -103,11 +109,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 _BOOL_KEYS = {
     "high_contrast", "reduce_motion", "sound_enabled", "speech_enabled",
     "guidance_enabled", "auto_confirm_answer", "show_dot_numbers",
+    "bold_text", "guided_mode", "show_large_target", "welcome_shown",
 }
-_FLOAT_KEYS = {"font_scale", "braille_cell_scale", "speech_rate", "volume", "mastery_threshold"}
+_FLOAT_KEYS = {"font_scale", "braille_cell_scale", "speech_rate", "volume", "mastery_threshold", "line_spacing"}
 _INT_KEYS: set[str] = set()
 _STR_KEYS = {
-    "theme", "text_color", "background_color", "dot_color", "dot_empty_color",
+    "theme", "display_mode", "text_color", "background_color", "dot_color", "dot_empty_color",
     "dot_border_color", "speech_voice", "speech_locale", "interface_language",
     "last_lesson_key", "last_level_key",
 }
@@ -119,6 +126,7 @@ _NUMERIC_BOUNDS: dict[str, tuple[float, float]] = {
     "speech_rate": (-1.0, 1.0),
     "volume": (0.0, 1.0),
     "mastery_threshold": (0.0, 100.0),
+    "line_spacing": (0.8, 3.0),
 }
 
 #: القيم المسموحة للثيم.

@@ -40,7 +40,7 @@ EXCLUDE_PATTERNS = [
 _exclude = re.compile('|'.join(EXCLUDE_PATTERNS), re.IGNORECASE)
 
 a = Analysis(
-    ['run.py'],
+    ['run_qt.py'],
     pathex=[str(Path('.').resolve())],
     binaries=[],
     datas=[

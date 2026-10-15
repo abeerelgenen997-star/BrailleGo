@@ -6,7 +6,7 @@ from pathlib import Path
 block_cipher = None
 
 a = Analysis(
-    ['run.py'],
+    ['run_qt.py'],
     pathex=[str(Path('.').resolve())],
     binaries=[],
     datas=[
