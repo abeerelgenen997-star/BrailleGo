@@ -4,10 +4,10 @@
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6.svg)](https://www.microsoft.com/windows)
 [![UI: wxPython](https://img.shields.io/badge/UI-wxPython-1B7FBF.svg)](https://wxpython.org/)
-[![Tests](https://img.shields.io/badge/tests-48%20passed-brightgreen.svg)](TESTING.md)
+[![Tests](https://img.shields.io/badge/tests-61%20passed-brightgreen.svg)](TESTING.md)
 [![Status](https://img.shields.io/badge/status-active-success.svg)](https://github.com/abeerelgenen997-star/BrailleGo/releases)
 
-**الإصدار:** `1.3.0` · **المنصة:** Windows 10/11 · **التقنيات:** Python + wxPython
+**الإصدار:** `1.4.0` · **المنصة:** Windows 10/11 · **التقنيات:** Python + wxPython
 
 تطبيق سطح مكتب حقيقي تعليمي لتعلّم برايل العربي والإنجليزي للمكفوفين وضعاف البصر، وللمبتدئين المبصرين، وللمدربين في مراكز التدريب والمؤسسات. الواجهة مبنية بـ **wxPython** لأن عناصرها عناصر Windows أصلية (Win32)، وهذا يمنح **توافقًا ممتازًا مع قارئات الشاشة** مثل NVDA وWindows Narrator وJAWS.
 
@@ -48,7 +48,7 @@
 
 نزّل أحد الخيارين من صفحة الإصدارات:
 
-1. **المُثبِّت (موصى به):** `BrailleGo-Setup-1.3.0.exe` — ثبّت البرنامج بشكل طبيعي (اختصار في قائمة ابدأ + إزالة من «إضافة أو إزالة البرامج»).
+1. **المُثبِّت (موصى به):** `BrailleGo-Setup-1.4.0.exe` — ثبّت البرنامج بشكل طبيعي (اختصار في قائمة ابدأ + إزالة من «إضافة أو إزالة البرامج»).
 2. **النسخة المحمولة (ملف واحد):** `BrailleGo.exe` — شغّله بنقرة مزدوجة مباشرة.
 
 > التنزيل من: [Releases](https://github.com/abeerelgenen997-star/BrailleGo/releases/latest)
@@ -105,16 +105,16 @@ powershell -ExecutionPolicy Bypass -File build_wx.ps1
 
 ```powershell
 .\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm BrailleGo_wx_onefile.spec
-"$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.3.0 installer\BrailleGo.iss
+"$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=1.4.0 installer\BrailleGo.iss
 ```
 
 أو بأمر واحد:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File build_wx.ps1 -Version 1.3.0 -Installer
+powershell -ExecutionPolicy Bypass -File build_wx.ps1 -Version 1.4.0 -Installer
 ```
 
-الناتج: `dist\installer\BrailleGo-Setup-1.3.0.exe`.
+الناتج: `dist\installer\BrailleGo-Setup-1.4.0.exe`.
 
 > نسخة Qt القديمة: `BrailleGo.spec` و`BrailleGo_onefile.spec` (تعتمدان `run_qt.py`).
 

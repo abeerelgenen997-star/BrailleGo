@@ -564,3 +564,283 @@ def test_braille_cell_accessibility_is_localized():
         assert "برايل" in arabic
     finally:
         i18n.set_lang("ar")
+
+
+# ----------------------------------------------------------------------
+# v1.4.0: الترحيب المكتوب/المسموع، التنقّل (رجوع/رئيسية/خروج و Esc)،
+# أهداف الدرس ورمز الهدف، وبطاقة «التطبيق» في الإعدادات.
+# ----------------------------------------------------------------------
+class _FakeKeyEvent:
+    def __init__(self, code):
+        self._code = code
+        self.skipped = False
+
+    def GetKeyCode(self):
+        return self._code
+
+    def ControlDown(self):
+        return False
+
+    def AltDown(self):
+        return False
+
+    def Skip(self):
+        self.skipped = True
+
+
+def test_navbar_has_back_home_exit(frame):
+    """شريط التنقّل يعرض أزرار رجوع/الرئيسية/خروج كما في برامج ويندوز."""
+    from braille_wx import i18n
+
+    assert frame._btn_back.GetLabel() == i18n.t("nav_back")
+    assert frame._btn_home.GetLabel() == i18n.t("nav_home")
+    assert frame._btn_exit.GetLabel() == i18n.t("btn_exit")
+
+
+def test_navigation_history_and_back(frame):
+    """زر الرجوع يعود إلى الشاشة السابقة بالترتيب."""
+    frame.navigate_to("home")
+    frame.navigate_to("lessons")
+    frame.navigate_to("help")
+    assert frame._current_id == "help"
+    assert frame.go_back() is True
+    assert frame._current_id == "lessons"
+    assert frame.go_back() is True
+    assert frame._current_id == "home"
+
+
+def test_escape_key_goes_back(frame):
+    """مفتاح Esc يعمل كزر رجوع قياسي."""
+    frame.navigate_to("home")
+    frame.navigate_to("lessons")
+    event = _FakeKeyEvent(wx.WXK_ESCAPE)
+    frame._on_char_hook(event)
+    assert event.skipped is False, "يجب أن يُستهلك مفتاح Esc"
+    assert frame._current_id == "home"
+
+
+def test_welcome_has_written_message_and_replay(frame, monkeypatch):
+    """الترحيب مكتوب + مسموع (موسيقى) + منطوق، مع زر لإعادة الاستماع."""
+    from braille_wx import i18n
+
+    called = {"tune": 0, "spoken": []}
+    monkeypatch.setattr(
+        frame.context.sounds, "welcome_tune",
+        lambda: called.__setitem__("tune", called["tune"] + 1),
+    )
+    monkeypatch.setattr(
+        frame.context, "speak",
+        lambda text, language=None: called["spoken"].append(text),
+    )
+    frame.navigate_to("home")
+    frame.navigate_to("welcome")
+    panel = frame._panels["welcome"]
+    assert panel._message.GetLabel() == i18n.t("welcome_speak")
+    assert panel._listen_button is not None
+
+    called["tune"] = 0
+    called["spoken"].clear()
+    panel._play_welcome()
+    assert called["tune"] >= 1
+    assert called["spoken"] == [i18n.t("welcome_speak")]
+
+
+def test_lesson_shows_objectives_and_symbols(frame):
+    """كل درس يعرض عنوان أهدافه والحرف/الرمز المطلوب تعلّمه."""
+    from braille_wx import i18n
+    from braille_go.core.curriculum import all_lessons
+
+    intro = first_lesson()
+    frame.navigate_to("lesson", lesson_key=intro.key, level_key=level_of_lesson(intro.key).key)
+    panel = frame._panels["lesson"]
+    assert panel._objectives.GetLabel() == i18n.t("lesson_objectives")
+    assert panel._symbols_label.GetLabel() == i18n.t("lesson_symbols_none")
+
+    letter_lesson = next((l for l in all_lessons() if l.symbol_keys and not l.is_exam), None)
+    if letter_lesson is not None:
+        frame.navigate_to(
+            "lesson", lesson_key=letter_lesson.key,
+            level_key=level_of_lesson(letter_lesson.key).key,
+        )
+        panel = frame._panels["lesson"]
+        label = panel._symbols_label.GetLabel()
+        assert label and label != i18n.t("lesson_symbols_none")
+        assert "{" not in label, "يجب أن تُطبَّق قيم التنسيق في النص"
+
+
+def test_build_exercise_shows_dot_help_and_target(frame):
+    """تدريب البناء يعرض تعليمات تحديد النقاط والحرف المطلوب تعلّمه."""
+    from braille_go.core.curriculum import all_lessons
+
+    intro = first_lesson()
+    frame.navigate_to("lesson", lesson_key=intro.key, level_key=level_of_lesson(intro.key).key)
+    panel = frame._panels["lesson"]
+    exercise = panel._exercises[panel._index]
+    assert exercise.answer_mode in (AnswerMode.BUILD_CELL, AnswerMode.BUILD_CELLS)
+    assert panel._cell_help.IsShown()
+    assert panel._cell_help.GetLabel()
+
+    letter_lesson = next((l for l in all_lessons() if l.symbol_keys and not l.is_exam), None)
+    if letter_lesson is not None:
+        frame.navigate_to(
+            "lesson", lesson_key=letter_lesson.key,
+            level_key=level_of_lesson(letter_lesson.key).key,
+        )
+        panel = frame._panels["lesson"]
+        index = next(
+            (i for i, e in enumerate(panel._exercises) if e.show_target_text and e.stimulus_text),
+            None,
+        )
+        if index is not None:
+            panel._index = index
+            panel._show_current()
+            assert panel._target_label.IsShown()
+            assert panel._exercises[index].stimulus_text in panel._target_label.GetLabel()
+
+
+def test_settings_has_application_section(frame):
+    """الإعدادات تحتوي بطاقة «التطبيق» بأزرار المشاركة/التحديث/البيانات/الإزالة."""
+    from braille_wx import i18n
+
+    frame.navigate_to("settings")
+    panel = frame._panels["settings"]
+    labels = _button_labels(panel)
+    for key in ("settings_share", "settings_check_updates", "settings_open_data", "settings_uninstall"):
+        assert i18n.t(key) in labels, (key, labels)
+
+
+def test_settings_app_actions_are_safe(frame, monkeypatch):
+    """أزرار التطبيق تعمل دون فتح نوافذ حقيقية أو تشغيل برامج."""
+    from braille_wx import app_management as am
+    from braille_wx import widgets as W
+
+    opened: list[str] = []
+    messages: list[tuple[str, str]] = []
+    monkeypatch.setattr(am, "open_url", lambda url: opened.append(url) or True)
+    monkeypatch.setattr(am, "open_data_folder", lambda: True)
+    monkeypatch.setattr(am, "find_uninstaller", lambda: None)
+    monkeypatch.setattr(W, "informational", lambda parent, title, text: messages.append((title, text)))
+    monkeypatch.setattr(W, "confirm", lambda parent, title, text: True)
+
+    frame.navigate_to("settings")
+    panel = frame._panels["settings"]
+    panel._share_app()
+    panel._check_updates()
+    panel._open_data_folder()
+    panel._uninstall()
+    assert opened, "يجب فتح رابط المشاركة/التحديث"
+    assert len(messages) >= 4
+
+
+def test_app_management_helpers():
+    """روابط المشروع ودوال إدارة التطبيق متاحة وآمنة."""
+    from braille_wx import app_management as am
+
+    assert am.REPO_URL.startswith("https://github.com/")
+    assert am.LATEST_RELEASE_URL.endswith("/releases/latest")
+    assert am.REPO_URL in am.LATEST_RELEASE_URL
+    found = am.find_uninstaller()
+    assert found is None or isinstance(found, str)
+    assert am.data_folder() is not None
+
+
+def test_review_v140_i18n_keys_translated():
+    """مفاتيح v1.4.0 الجديدة مترجمة في اللغات الأربع."""
+    from braille_wx import i18n
+
+    keys = (
+        "nav_back", "nav_home", "btn_exit", "welcome_listen", "lesson_objectives",
+        "lesson_symbols_label", "lesson_symbols_none", "target_label",
+        "cell_help_title", "cell_help_legend", "settings_intro", "settings_app_section",
+        "settings_app_desc", "settings_share", "share_done", "settings_check_updates",
+        "updates_opened", "settings_open_data", "settings_uninstall", "uninstall_title",
+        "uninstall_confirm", "uninstall_not_found", "app_version_label",
+        "speech_voice_label", "speech_voice_auto", "speech_test", "speech_test_phrase",
+    )
+    try:
+        for lang in i18n.languages():
+            i18n.set_lang(lang)
+            for key in keys:
+                assert i18n.t(key) != key, (lang, key)
+    finally:
+        i18n.set_lang("ar")
+
+
+def test_speech_enabled_and_voice_picker_by_default(frame):
+    """النطق مُفعَّل افتراضيًا، والإعدادات فيها مُنتقي صوت وزر تجربة."""
+    from braille_wx import i18n
+
+    assert bool(frame.context.settings.get("speech_enabled")) is True
+    frame.navigate_to("settings")
+    panel = frame._panels["settings"]
+    assert panel._voice is not None
+    assert panel._voice.GetCount() >= 1
+    assert panel._voice.GetString(0) == i18n.t("speech_voice_auto")
+
+
+def test_target_letter_phrase_is_clear(frame, monkeypatch):
+    """نطق الحرف المطلوب تعلّمه بصيغة واضحة («حرف أ» / «Letter A»)."""
+    from braille_go.core.exercises import Exercise, ExerciseKind, AnswerMode
+
+    frame.navigate_to("home")
+    panel = frame._panels["lesson"]
+
+    arabic = Exercise(
+        key="t", kind=ExerciseKind.IDENTIFY_CHAR, lesson_key="t", prompt_ar="",
+        answer_mode=AnswerMode.CHOOSE_TEXT, correct_answer="أ", language="ar",
+    )
+    english = Exercise(
+        key="t", kind=ExerciseKind.IDENTIFY_CHAR, lesson_key="t", prompt_ar="",
+        answer_mode=AnswerMode.CHOOSE_TEXT, correct_answer="A", language="en",
+    )
+    assert panel._single_target(arabic) == "أ"
+    assert panel._target_phrase("أ", arabic) == "حرف أ"
+    assert panel._target_phrase("A", english) == "Letter A"
+
+    spoken: list[str] = []
+    monkeypatch.setattr(frame.context, "speak", lambda text, language=None: spoken.append(text))
+    panel._mode = ""
+    panel._announce_target(arabic)
+    assert spoken == ["حرف أ"]
+    panel._mode = "exam"
+    spoken.clear()
+    panel._announce_target(arabic)
+    assert spoken == [], "لا نكشف الحرف في وضع الاختبار"
+
+
+def test_braille_cell_accepts_focus_and_toggles(monkeypatch):
+    """الخلية تقبل التركيز بـ Tab، والمسافة تبدّل النقطة، والأسهم تتنقّل."""
+    import wx as _wx
+
+    from braille_wx.braille_cell import BrailleCellInput
+
+    _wx.GetApp()
+    parent = _wx.Frame(None)
+    try:
+        cell = BrailleCellInput(parent, scale=1.0, theme=None)
+        assert cell.AcceptsFocus() is True
+        assert cell.AcceptsFocusFromKeyboard() is True
+        cell.toggle_dot(1)
+        assert cell.dots() == (1,)
+        cell.toggle_dot(1)
+        assert cell.dots() == ()
+
+        class _Key:
+            def __init__(self, code):
+                self._code = code
+
+            def GetKeyCode(self):
+                return self._code
+
+            def ShiftDown(self):
+                return False
+
+            def Skip(self):
+                pass
+
+        cell._on_key_down(_Key(_wx.WXK_RIGHT))
+        assert cell._cursor == 4  # من النقطة 1 إلى النقطة 4 في العمود الأيمن.
+        cell._on_key_down(_Key(_wx.WXK_DOWN))
+        assert cell._cursor == 5
+    finally:
+        parent.Destroy()

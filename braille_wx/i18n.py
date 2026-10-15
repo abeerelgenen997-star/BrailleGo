@@ -1093,6 +1093,187 @@ _SPEECH_TEXTS: dict[str, dict[str, str]] = {
     },
 }
 
+#: نصوص التنقّل وشاشة الترحيب وبطاقة «التطبيق» في الإعدادات (v1.4.0).
+_APP_TEXTS: dict[str, dict[str, str]] = {
+    "ar": {
+        "settings_intro": (
+            "من هنا تضبط اللغة ونمط العرض والألوان وفئة المستخدم المستهدفة، "
+            "وكذلك إعدادات الصوت والتطبيق."
+        ),
+        "nav_bar": "شريط التنقّل",
+        "nav_back": "رجوع",
+        "nav_back_tip": "العودة إلى الشاشة السابقة (مفتاح Esc).",
+        "nav_home": "الرئيسية",
+        "nav_home_tip": "الانتقال إلى الشاشة الرئيسية.",
+        "btn_exit": "خروج",
+        "btn_exit_tip": "إغلاق التطبيق.",
+        "welcome_listen": "استمع إلى الترحيب مرة أخرى",
+        "lesson_objectives": "أهداف هذا الدرس",
+        "lesson_symbols_label": "الحرف/الرمز المطلوب تعلّمه: {symbols}",
+        "lesson_symbols_none": "درس تمهيدي يعرّف بطريقة برايل بلا رموز محدّدة.",
+        "target_label": "المطلوب تعلّمه: {target}",
+        "cell_help_title": "كيف تحدّد النقاط؟",
+        "cell_help_legend": "ترتيب النقاط: 1 و2 و3 في العمود الأيسر، و4 و5 و6 في العمود الأيمن.",
+        "settings_app_section": "التطبيق",
+        "settings_app_desc": "مشاركة التطبيق، والتحقّق من التحديثات، وإزالة التطبيق — بما يناسب نظام ويندوز.",
+        "settings_share": "مشاركة التطبيق",
+        "settings_share_tip": "نسخ رابط التطبيق إلى الحافظة وفتح صفحة الإصدارات.",
+        "share_done": "تم نسخ رابط التطبيق إلى الحافظة وفتح صفحة الإصدارات في المتصفّح.",
+        "settings_check_updates": "التحقّق من التحديثات",
+        "updates_opened": "تم فتح صفحة أحدث إصدار في المتصفّح.",
+        "settings_open_data": "فتح مجلّد البيانات",
+        "data_folder_opened": "تم فتح مجلّد بيانات التطبيق.",
+        "data_folder_failed": "تعذّر فتح مجلّد البيانات.",
+        "settings_uninstall": "إزالة التطبيق",
+        "uninstall_title": "إزالة التطبيق",
+        "uninstall_confirm": "هل تريد تشغيل برنامج إزالة Braille Go من الجهاز؟",
+        "uninstall_not_found": (
+            "لم يُعثر على برنامج إزالة (يبدو أنك تستخدم النسخة المحمولة). لحذف "
+            "البرنامج يكفي حذف مجلّد التطبيق، ويمكنك حذف بيانات المستخدم من زر "
+            "«فتح مجلّد البيانات»."
+        ),
+        "uninstall_launched": "تم تشغيل برنامج إزالة Braille Go.",
+        "app_version_label": "إصدار التطبيق: {version}",
+        "speech_voice_label": "صوت التطبيق (النطق)",
+        "speech_voice_auto": "تلقائي (حسب اللغة)",
+        "speech_test": "تجربة الصوت",
+        "speech_test_phrase": "هذا صوت تطبيق برايل جو، مرحبًا بك.",
+    },
+    "en": {
+        "settings_intro": (
+            "Set the language, display mode, colours and target user type here, "
+            "as well as the sound and application options."
+        ),
+        "nav_bar": "Navigation bar",
+        "nav_back": "Back",
+        "nav_back_tip": "Go back to the previous screen (Esc).",
+        "nav_home": "Home",
+        "nav_home_tip": "Go to the home screen.",
+        "btn_exit": "Exit",
+        "btn_exit_tip": "Close the application.",
+        "welcome_listen": "Listen to the welcome again",
+        "lesson_objectives": "Objectives of this lesson",
+        "lesson_symbols_label": "Letter/symbol to learn: {symbols}",
+        "lesson_symbols_none": "An introductory lesson about braille with no specific symbols.",
+        "target_label": "Learn this: {target}",
+        "cell_help_title": "How do I select the dots?",
+        "cell_help_legend": "Dot order: 1, 2 and 3 in the left column, and 4, 5 and 6 in the right column.",
+        "settings_app_section": "Application",
+        "settings_app_desc": "Share the app, check for updates, and uninstall it — the Windows-friendly way.",
+        "settings_share": "Share the app",
+        "settings_share_tip": "Copy the app link to the clipboard and open the releases page.",
+        "share_done": "The app link was copied to the clipboard and the releases page opened in your browser.",
+        "settings_check_updates": "Check for updates",
+        "updates_opened": "The latest release page was opened in your browser.",
+        "settings_open_data": "Open data folder",
+        "data_folder_opened": "The app data folder was opened.",
+        "data_folder_failed": "Could not open the data folder.",
+        "settings_uninstall": "Uninstall the app",
+        "uninstall_title": "Uninstall",
+        "uninstall_confirm": "Run the Braille Go uninstaller now?",
+        "uninstall_not_found": (
+            "No uninstaller was found (you seem to be using the portable build). "
+            "Delete the app folder to remove the program, and use the "
+            "\u201cOpen data folder\u201d button to remove your user data."
+        ),
+        "uninstall_launched": "The Braille Go uninstaller was launched.",
+        "app_version_label": "App version: {version}",
+        "speech_voice_label": "App voice (speech)",
+        "speech_voice_auto": "Automatic (by language)",
+        "speech_test": "Test voice",
+        "speech_test_phrase": "This is the Braille Go app voice. Welcome.",
+    },
+    "fr": {
+        "settings_intro": (
+            "Réglez ici la langue, le mode d'affichage, les couleurs et le type "
+            "d'utilisateur cible, ainsi que les options de son et d'application."
+        ),
+        "nav_bar": "Barre de navigation",
+        "nav_back": "Retour",
+        "nav_back_tip": "Revenir à l'écran précédent (Échap).",
+        "nav_home": "Accueil",
+        "nav_home_tip": "Aller à l'écran d'accueil.",
+        "btn_exit": "Quitter",
+        "btn_exit_tip": "Fermer l'application.",
+        "welcome_listen": "Réécouter l'accueil",
+        "lesson_objectives": "Objectifs de cette leçon",
+        "lesson_symbols_label": "Lettre/symbole à apprendre : {symbols}",
+        "lesson_symbols_none": "Leçon d'introduction au braille sans symbole précis.",
+        "target_label": "À apprendre : {target}",
+        "cell_help_title": "Comment sélectionner les points ?",
+        "cell_help_legend": "Ordre des points : 1, 2 et 3 dans la colonne de gauche, et 4, 5 et 6 dans celle de droite.",
+        "settings_app_section": "Application",
+        "settings_app_desc": "Partager l'application, rechercher des mises à jour et la désinstaller — façon Windows.",
+        "settings_share": "Partager l'application",
+        "settings_share_tip": "Copier le lien de l'application et ouvrir la page des versions.",
+        "share_done": "Le lien de l'application a été copié et la page des versions ouverte dans le navigateur.",
+        "settings_check_updates": "Rechercher des mises à jour",
+        "updates_opened": "La page de la dernière version a été ouverte dans le navigateur.",
+        "settings_open_data": "Ouvrir le dossier de données",
+        "data_folder_opened": "Le dossier de données a été ouvert.",
+        "data_folder_failed": "Impossible d'ouvrir le dossier de données.",
+        "settings_uninstall": "Désinstaller l'application",
+        "uninstall_title": "Désinstallation",
+        "uninstall_confirm": "Lancer le désinstalleur de Braille Go maintenant ?",
+        "uninstall_not_found": (
+            "Aucun désinstalleur trouvé (vous utilisez sans doute la version "
+            "portable). Supprimez le dossier de l'application pour la retirer, et "
+            "utilisez le bouton « Ouvrir le dossier de données » pour effacer vos "
+            "données."
+        ),
+        "uninstall_launched": "Le désinstalleur de Braille Go a été lancé.",
+        "app_version_label": "Version de l'application : {version}",
+        "speech_voice_label": "Voix de l'application (synthèse)",
+        "speech_voice_auto": "Automatique (selon la langue)",
+        "speech_test": "Tester la voix",
+        "speech_test_phrase": "Ceci est la voix de l'application Braille Go. Bienvenue.",
+    },
+    "es": {
+        "settings_intro": (
+            "Aquí puedes ajustar el idioma, el modo de visualización, los colores "
+            "y el tipo de usuario objetivo, además del sonido y la aplicación."
+        ),
+        "nav_bar": "Barra de navegación",
+        "nav_back": "Atrás",
+        "nav_back_tip": "Volver a la pantalla anterior (Esc).",
+        "nav_home": "Inicio",
+        "nav_home_tip": "Ir a la pantalla de inicio.",
+        "btn_exit": "Salir",
+        "btn_exit_tip": "Cerrar la aplicación.",
+        "welcome_listen": "Escuchar la bienvenida otra vez",
+        "lesson_objectives": "Objetivos de esta lección",
+        "lesson_symbols_label": "Letra/símbolo que se va a aprender: {symbols}",
+        "lesson_symbols_none": "Lección introductoria sobre el braille sin símbolos concretos.",
+        "target_label": "Aprende esto: {target}",
+        "cell_help_title": "¿Cómo selecciono los puntos?",
+        "cell_help_legend": "Orden de los puntos: 1, 2 y 3 en la columna izquierda, y 4, 5 y 6 en la derecha.",
+        "settings_app_section": "Aplicación",
+        "settings_app_desc": "Compartir la app, buscar actualizaciones y desinstalarla, al estilo de Windows.",
+        "settings_share": "Compartir la app",
+        "settings_share_tip": "Copiar el enlace de la app y abrir la página de versiones.",
+        "share_done": "Se copió el enlace de la app y se abrió la página de versiones en el navegador.",
+        "settings_check_updates": "Buscar actualizaciones",
+        "updates_opened": "Se abrió la página de la última versión en el navegador.",
+        "settings_open_data": "Abrir carpeta de datos",
+        "data_folder_opened": "Se abrió la carpeta de datos de la app.",
+        "data_folder_failed": "No se pudo abrir la carpeta de datos.",
+        "settings_uninstall": "Desinstalar la app",
+        "uninstall_title": "Desinstalación",
+        "uninstall_confirm": "¿Ejecutar ahora el desinstalador de Braille Go?",
+        "uninstall_not_found": (
+            "No se encontró ningún desinstalador (parece que usas la versión "
+            "portátil). Elimina la carpeta de la app para quitarla y usa el botón "
+            "«Abrir carpeta de datos» para borrar tus datos."
+        ),
+        "uninstall_launched": "Se inició el desinstalador de Braille Go.",
+        "app_version_label": "Versión de la app: {version}",
+        "speech_voice_label": "Voz de la app (síntesis)",
+        "speech_voice_auto": "Automática (según el idioma)",
+        "speech_test": "Probar la voz",
+        "speech_test_phrase": "Esta es la voz de la aplicación Braille Go. Bienvenido.",
+    },
+}
+
 for _lang, _texts in _SHORTCUT_TEXTS.items():
     EXTRA.setdefault(_lang, {}).update(_texts)
 for _lang, _texts in _LESSON_TEXTS.items():
@@ -1100,6 +1281,8 @@ for _lang, _texts in _LESSON_TEXTS.items():
 for _lang, _texts in _CELL_TEXTS.items():
     EXTRA.setdefault(_lang, {}).update(_texts)
 for _lang, _texts in _SPEECH_TEXTS.items():
+    EXTRA.setdefault(_lang, {}).update(_texts)
+for _lang, _texts in _APP_TEXTS.items():
     EXTRA.setdefault(_lang, {}).update(_texts)
 
 

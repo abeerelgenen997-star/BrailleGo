@@ -9,6 +9,7 @@ import wx
 
 from braille_go.core.curriculum import LEVELS, LEVELS_BY_KEY, first_lesson, level_of_lesson
 
+from . import app_management
 from . import i18n
 from . import profiles
 from . import theme as theme_mod
@@ -62,46 +63,56 @@ class WelcomePanel(BasePanel):
         subtitle.SetName(i18n.t("welcome_subtitle"))
         self.content.Add(subtitle, 0, wx.ALIGN_CENTER | wx.ALL, 12)
 
+        # نص الترحيب الكامل **مكتوبًا** في صندوق قراءة (يقرأه قارئ الشاشة).
+        self._message = W.wrapped_text(self, i18n.t("welcome_speak"), width=760)
+        self._message.SetName(i18n.t("welcome"))
+        self.content.Add(self._message, 0, wx.ALIGN_CENTER | wx.ALL, 12)
+
+        buttons = wx.BoxSizer(wx.HORIZONTAL)
+        self._listen_button = W.action_button(
+            self, i18n.t("welcome_listen"), on_click=self._play_welcome,
+            tooltip=i18n.t("welcome_listen"),
+        )
         self._button = W.action_button(
             self, i18n.t("start_learning"), primary=True,
             on_click=self._go_home, tooltip="Enter",
         )
-        self.content.Add(self._button, 0, wx.ALIGN_CENTER | wx.ALL, 20)
+        buttons.Add(self._listen_button, 0, wx.RIGHT, 12)
+        buttons.Add(self._button, 0)
+        self.content.Add(buttons, 0, wx.ALIGN_CENTER | wx.ALL, 20)
         self.content.AddStretchSpacer(1)
-        self._timer: wx.Timer | None = None
         self.finish_layout()
 
     def activate(self, **kwargs) -> None:
+        # الترحيب **مسموع ومنطوق**: موسيقى مولّدة داخل التطبيق + نطق الكلمة.
+        self._play_welcome()
+        try:
+            self.context.settings.set("welcome_shown", True)
+        except Exception:
+            pass
+        if self._button is not None:
+            self._button.SetFocus()
+
+    def deactivate(self) -> None:
+        pass
+
+    def _play_welcome(self) -> None:
+        """شغّل موسيقى الترحيب وانطق كلمة الترحيب (من داخل التطبيق)."""
         settings = self.context.settings
-        # موسيقى ترحيبية من داخل التطبيق (نغمة مولّدة، بلا ملفات خارجية).
         if bool(settings.get("welcome_tune_enabled", True)):
             try:
                 self.context.sounds.welcome_tune()
             except Exception:
                 pass
-        # نطق كلمة الترحيب بصوت من داخل التطبيق.
         if bool(settings.get("welcome_speech_enabled", True)):
             try:
-                self.context.speak(i18n.t("welcome_speak"), settings.get("speech_locale") or None)
+                self.context.speak(
+                    i18n.t("welcome_speak"), settings.get("speech_locale") or None
+                )
             except Exception:
                 pass
-        try:
-            settings.set("welcome_shown", True)
-        except Exception:
-            pass
-        if self._button is not None:
-            self._button.SetFocus()
-        self._timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, lambda event: self._go_home(), self._timer)
-        self._timer.StartOnce(3500)
-
-    def deactivate(self) -> None:
-        if self._timer is not None:
-            self._timer.Stop()
 
     def _go_home(self) -> None:
-        if self._timer is not None:
-            self._timer.Stop()
         self.frame.navigate_to("home")
 
     def confirm_action(self) -> bool:
@@ -109,6 +120,11 @@ class WelcomePanel(BasePanel):
         return True
 
     def on_enter(self) -> bool:
+        # إن كان التركيز على زرّ «استمع مرة أخرى» فليُعِد الترحيب، وإلا ابدأ.
+        focused = wx.Window.FindFocus()
+        if focused is self._listen_button:
+            self._play_welcome()
+            return True
         self._go_home()
         return True
 
@@ -440,6 +456,7 @@ class SettingsPanel(BasePanel):
         s = self.context.settings
 
         self.content.Add(W.heading(self, i18n.t("settings"), self.theme), 0, wx.ALL, 8)
+        self.content.Add(W.wrapped_text(self, i18n.t("settings_intro")), 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 8)
 
         # فئة المستخدم --------------------------------------------------
         # مطلب المراجعة: يحدّد المستخدم فئته (مدرب / متدرب مبصر / كفيف /
@@ -552,6 +569,31 @@ class SettingsPanel(BasePanel):
         self._rate = wx.SpinCtrlDouble(spanel, min=-1.0, max=1.0, inc=0.05)
         self._rate.SetValue(float(s.get("speech_rate", 0.0)))
         ssizer.Add(self._rate, 0, wx.EXPAND | wx.ALL, 4)
+
+        # اختيار صوت النطق (أصوات Windows/الذكاء الاصطناعي المثبّتة) ----
+        # يتيح للمستخدم تخصيص صوت التطبيق واختبارَه فورًا.
+        ssizer.Add(W.body(spanel, i18n.t("speech_voice_label")), 0, wx.ALL, 2)
+        voices = []
+        try:
+            voices = list(self.context.speech.voices())
+        except Exception:
+            voices = []
+        self._voice_ids = [""] + [str(v.id) for v in voices]
+        voice_names = [i18n.t("speech_voice_auto")] + [
+            (f"{v.name} — {v.language}" if v.language else str(v.name)) for v in voices
+        ]
+        self._voice = wx.Choice(spanel, choices=voice_names)
+        self._voice.SetName(i18n.t("speech_voice_label"))
+        current_voice = str(s.get("speech_voice", "") or "")
+        if current_voice and current_voice in self._voice_ids:
+            self._voice.SetSelection(self._voice_ids.index(current_voice))
+        else:
+            self._voice.SetSelection(0)
+        ssizer.Add(self._voice, 0, wx.EXPAND | wx.ALL, 4)
+        ssizer.Add(
+            W.action_button(spanel, i18n.t("speech_test"), on_click=self._test_voice),
+            0, wx.ALL, 4,
+        )
         ssizer.Add(W.wrapped_text(spanel, f"{i18n.t('speech_status')}: {self.context.speech_status()}"), 0, wx.EXPAND | wx.ALL, 4)
 
         # اللغة والتعلّم ----------------------------------------------
@@ -577,6 +619,37 @@ class SettingsPanel(BasePanel):
         self._mastery.SetValue(float(s.get("mastery_threshold", 85.0)))
         lsizer.Add(self._mastery, 0, wx.EXPAND | wx.ALL, 4)
 
+        # التطبيق: مشاركة، تحديث، إزالة (بما يناسب ويندوز) ---------------
+        apanel, asizer = W.card(self, self.content, i18n.t("settings_app_section"))
+        asizer.Add(W.wrapped_text(apanel, i18n.t("settings_app_desc")), 0, wx.EXPAND | wx.ALL, 4)
+        app_row_1 = wx.BoxSizer(wx.HORIZONTAL)
+        app_row_1.Add(
+            W.action_button(apanel, i18n.t("settings_share"), on_click=self._share_app,
+                            tooltip=i18n.t("settings_share_tip")),
+            0, wx.RIGHT, 8,
+        )
+        app_row_1.Add(
+            W.action_button(apanel, i18n.t("settings_check_updates"), on_click=self._check_updates),
+            0,
+        )
+        asizer.Add(app_row_1, 0, wx.EXPAND | wx.ALL, 4)
+        app_row_2 = wx.BoxSizer(wx.HORIZONTAL)
+        app_row_2.Add(
+            W.action_button(apanel, i18n.t("settings_open_data"), on_click=self._open_data_folder),
+            0, wx.RIGHT, 8,
+        )
+        app_row_2.Add(
+            W.action_button(apanel, i18n.t("settings_uninstall"), on_click=self._uninstall),
+            0,
+        )
+        asizer.Add(app_row_2, 0, wx.EXPAND | wx.ALL, 4)
+        from . import __version__ as _app_version
+
+        asizer.Add(
+            W.body(apanel, i18n.t("app_version_label").format(version=_app_version)),
+            0, wx.ALL, 4,
+        )
+
         # الأزرار ------------------------------------------------------
         buttons = wx.BoxSizer(wx.HORIZONTAL)
         buttons.Add(W.action_button(self, i18n.t("save_settings"), primary=True, on_click=self._apply, tooltip="Enter"), 0, wx.RIGHT, 8)
@@ -592,6 +665,53 @@ class SettingsPanel(BasePanel):
         picker.SetName(label)
         sizer.Add(picker, 0, wx.EXPAND | wx.ALL, 4)
         return picker
+
+    # ------------------------------------------------------------------
+    # التطبيق: مشاركة / تحديث / بيانات / إزالة
+    # ------------------------------------------------------------------
+    def _share_app(self) -> None:
+        """انسخ رابط التطبيق إلى الحافظة وافتح صفحة الإصدارات."""
+        try:
+            if wx.TheClipboard.Open():
+                wx.TheClipboard.SetData(wx.TextDataObject(app_management.LATEST_RELEASE_URL))
+                wx.TheClipboard.Flush()
+                wx.TheClipboard.Close()
+        except Exception:
+            pass
+        app_management.open_url(app_management.LATEST_RELEASE_URL)
+        W.informational(self.frame, i18n.t("settings_share"), i18n.t("share_done"))
+
+    def _check_updates(self) -> None:
+        """افتح صفحة أحدث إصدار في المتصفّح."""
+        app_management.open_url(app_management.LATEST_RELEASE_URL)
+        W.informational(self.frame, i18n.t("settings_check_updates"), i18n.t("updates_opened"))
+
+    def _open_data_folder(self) -> None:
+        """افتح مجلّد بيانات المستخدم (قاعدة البيانات والإعدادات)."""
+        if app_management.open_data_folder():
+            W.informational(self.frame, i18n.t("settings_open_data"), i18n.t("data_folder_opened"))
+        else:
+            W.informational(self.frame, i18n.t("settings_open_data"), i18n.t("data_folder_failed"))
+
+    def _test_voice(self) -> None:
+        """انطق عبارة تجريبية بالصوت المختار للتحقّق منه."""
+        index = self._voice.GetSelection()
+        voice_id = self._voice_ids[index] if 0 <= index < len(self._voice_ids) else ""
+        self.context.settings.set("speech_voice", voice_id)
+        self.context.apply_settings()
+        language = "ar" if i18n.get_lang() == "ar" else "en"
+        self.context.speak(i18n.t("speech_test_phrase"), language)
+
+    def _uninstall(self) -> None:
+        """شغّل برنامج الإزالة إن كانت النسخة مثبّتة، وإلا أرشد المستخدم."""
+        if not W.confirm(self.frame, i18n.t("uninstall_title"), i18n.t("uninstall_confirm")):
+            return
+        command = app_management.find_uninstaller()
+        if not command:
+            W.informational(self.frame, i18n.t("uninstall_title"), i18n.t("uninstall_not_found"))
+            return
+        app_management.run_uninstaller(command)
+        W.informational(self.frame, i18n.t("uninstall_title"), i18n.t("uninstall_launched"))
 
     def _on_mode_preview(self, event) -> None:
         if self._building:
@@ -665,6 +785,12 @@ class SettingsPanel(BasePanel):
         s.set("welcome_speech_enabled", self._welcome_speech.GetValue())
         s.set("volume", float(self._volume.GetValue()))
         s.set("speech_rate", float(self._rate.GetValue()))
+        try:
+            v_index = self._voice.GetSelection()
+            if 0 <= v_index < len(self._voice_ids):
+                s.set("speech_voice", self._voice_ids[v_index])
+        except Exception:
+            pass
         s.set("line_spacing", float(self._line_spacing.GetValue()))
         s.set("guided_mode", self._guided.GetValue())
         s.set("show_large_target", self._large_target.GetValue())

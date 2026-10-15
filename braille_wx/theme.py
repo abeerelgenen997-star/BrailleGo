@@ -62,7 +62,7 @@ MODES: dict[str, DisplayMode] = {
         background="#f4f6f8", surface="#ffffff", surface_alt="#eaeef3",
         text="#111418", muted="#4a525c", accent="#0b5fa5", accent_text="#ffffff",
         border="#c3ccd6", focus="#ff8c00", success="#0a7d3c", error="#a11212",
-        dot_on="#111418", dot_off="#d8dee5", dot_border="#5a636d",
+        dot_on="#0d0d0d", dot_off="#9aa4b0", dot_border="#2f363e",
     ),
     "normal_dark": DisplayMode(
         "normal_dark", "mode_normal_dark",

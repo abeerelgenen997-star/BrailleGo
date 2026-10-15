@@ -5,10 +5,10 @@
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File build_wx.ps1
-#   powershell -ExecutionPolicy Bypass -File build_wx.ps1 -Version 1.3.0 -Installer
+#   powershell -ExecutionPolicy Bypass -File build_wx.ps1 -Version 1.4.0 -Installer
 
 param(
-    [string]$Version = "1.3.0",
+    [string]$Version = "1.4.0",
     [switch]$Installer
 )
 

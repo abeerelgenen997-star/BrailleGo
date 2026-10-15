@@ -39,7 +39,11 @@ class LessonPanel(BasePanel):
         # عناصر تُبنى عند التنشيط.
         self._title: wx.StaticText | None = None
         self._banner: wx.StaticText | None = None
+        self._objectives: wx.StaticText | None = None
         self._intro: wx.StaticText | None = None
+        self._symbols_label: wx.StaticText | None = None
+        self._target_label: wx.StaticText | None = None
+        self._cell_help: wx.StaticText | None = None
         self._question_box: wx.TextCtrl | None = None
         self._stimulus_view: BrailleCellsView | None = None
         self._braille_label: wx.StaticText | None = None
@@ -70,8 +74,29 @@ class LessonPanel(BasePanel):
         self._banner.SetName(i18n.t("status_bar"))
         self.content.Add(self._banner, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
 
+        # أهداف الدرس: عنوان واضح ثم وصف الدرس ومقدّمته ----------------
+        self._objectives = W.subheading(self, i18n.t("lesson_objectives"), theme)
+        self.content.Add(self._objectives, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+
         self._intro = W.wrapped_text(self, "")
-        self.content.Add(self._intro, 0, wx.EXPAND | wx.ALL, 10)
+        self.content.Add(self._intro, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+        # الحرف/الرمز المطلوب تعلّمه في هذا الدرس ----------------------
+        self._symbols_label = W.wrapped_text(self, "")
+        self.content.Add(self._symbols_label, 0, wx.EXPAND | wx.LEFT | wx.RIGHT, 10)
+
+        # المطلوب تعلّمه في السؤال الحالي (كبير وواضح للمبتدئ المبصر) ---
+        self._target_label = wx.StaticText(self, label="")
+        self._target_label.SetName(i18n.t("target_label").format(target=""))
+        self._target_label._keep_font = True
+        try:
+            target_font = theme.make_font(20.0)
+            target_font.SetWeight(wx.FONTWEIGHT_BOLD)
+            self._target_label.SetFont(target_font)
+        except Exception:
+            pass
+        self._target_label.Hide()
+        self.content.Add(self._target_label, 0, wx.EXPAND | wx.ALL, 10)
 
         # صندوق السؤال (Edit Box قابل للقراءة الكاملة) -----------------
         qbox, qsizer = W.card(self, self.content, i18n.t("question_card"))
@@ -114,6 +139,20 @@ class LessonPanel(BasePanel):
         cells_outer.Add(self._cells_panel, 0, wx.ALL, 8)
         cells_outer.AddStretchSpacer(1)
         self.content.Add(cells_outer, 0, wx.EXPAND)
+
+        # تعليمات مرئية واضحة لطريقة تحديد النقاط (تظهر في تدريبات البناء) --
+        self._cell_help = W.wrapped_text(
+            self,
+            i18n.t("cell_help_title")
+            + "\n"
+            + i18n.t("cell_input_hint")
+            + "\n"
+            + i18n.t("cell_help_legend"),
+            width=760,
+        )
+        self._cell_help.SetName(i18n.t("cell_help_title"))
+        self._cell_help.Hide()
+        self.content.Add(self._cell_help, 0, wx.EXPAND | wx.ALL, 8)
 
         # شريط الأزرار -------------------------------------------------
         buttons = wx.BoxSizer(wx.HORIZONTAL)
@@ -182,6 +221,8 @@ class LessonPanel(BasePanel):
         self._intro.SetLabel(
             i18n.lesson_intro(self._lesson) or i18n.lesson_description(self._lesson) or ""
         )
+        if self._symbols_label is not None:
+            self._symbols_label.SetLabel(self._lesson_symbols_text())
 
         if self._mode == "matching":
             self._exercises = self.context.generator.generate_matching(count=8, language=self._match_lang)
@@ -265,6 +306,30 @@ class LessonPanel(BasePanel):
     # ------------------------------------------------------------------
     # العرض
     # ------------------------------------------------------------------
+    def _lesson_symbols_text(self) -> str:
+        """نص يوضّح الحرف/الرمز (أو الرموز) التي يعلّمها هذا الدرس."""
+        lesson = self._lesson
+        if lesson is None:
+            return ""
+        arabic = i18n.get_lang() == "ar"
+        names: list[str] = []
+        for key in list(lesson.symbol_keys)[:8]:
+            symbol = None
+            try:
+                symbol = self.context.repository.get(key)
+            except Exception:
+                symbol = None
+            if symbol is None:
+                continue
+            name = symbol.name_ar if arabic else (symbol.name_en or symbol.name_ar)
+            if name:
+                names.append(name)
+        if not names:
+            return i18n.t("lesson_symbols_none")
+        return i18n.t("lesson_symbols_label").format(
+            symbols=i18n.t("ex_separator").join(names)
+        )
+
     def _show_current(self) -> None:
         if self._index >= len(self._exercises):
             self._finish()
@@ -322,6 +387,25 @@ class LessonPanel(BasePanel):
         else:
             self._btn_clear.Hide()
 
+        # الهدف: أظهِر الحرف/الرمز المطلوب تعلّمه بوضوح إن توفّر نصّه.
+        target = ex.stimulus_text if (ex.show_target_text and ex.stimulus_text) else ""
+        if self._target_label is not None:
+            if target:
+                text = i18n.t("target_label").format(target=target)
+                self._target_label.SetLabel(text)
+                self._target_label.SetName(text)
+                self._target_label.Show()
+            else:
+                self._target_label.Hide()
+
+        # تعليمات مرئية لطريقة تحديد النقاط في تدريبات البناء.
+        if self._cell_help is not None:
+            if ex.answer_mode in (AnswerMode.BUILD_CELL, AnswerMode.BUILD_CELLS):
+                self._cell_help.Show()
+            else:
+                self._cell_help.Hide()
+
+        self.content.Layout()
         self._show_feedback("")
         self._btn_next.Hide()
         self._btn_confirm.Enable(True)
@@ -351,10 +435,11 @@ class LessonPanel(BasePanel):
     }
 
     def _announce_target(self, ex) -> None:
-        """انطق الحرف أو الرقم المطلوب بصوت من داخل التطبيق.
+        """انطق الحرف/الرمز المطلوب تعلّمه بصوت واضح من داخل التطبيق.
 
         تُفعَّل هذه الميزة عبر إعداد ``announce_symbols``، وتُساعد المتعلّم
-        الكفيف على معرفة الحرف/الرقم الحالي مباشرة دون قراءة الشاشة.
+        الكفيف على معرفة الحرف/الرقم الحالي مباشرة دون قراءة الشاشة. ننطق
+        الحرف بصيغة واضحة («الحرف أ» / «Letter A») باستخدام صوت التطبيق.
         """
         try:
             if not bool(self.context.settings.get("announce_symbols", True)):
@@ -364,20 +449,38 @@ class LessonPanel(BasePanel):
         # في وضع الاختبار لا نُعلن الرمز حتى لا نفشي الإجابة.
         if self._mode == "exam":
             return
-        target = (ex.correct_answer or ex.stimulus_text or "").strip()
-        if len(target) != 1:
+        target = self._single_target(ex)
+        if not target:
             return
-        if ex.language == "en":
+        self.context.speak(self._target_phrase(target, ex), ex.language)
+
+    def _single_target(self, ex) -> str:
+        """أعِد الحرف/الرقم المستهدف (حرف واحد) من التمرين إن أمكن."""
+        candidates: list[str] = [ex.correct_answer, ex.stimulus_text]
+        for key in getattr(ex, "symbol_keys", ()) or ():
+            symbol = None
+            try:
+                symbol = self.context.repository.get(key)
+            except Exception:
+                symbol = None
+            if symbol is not None:
+                candidates.append(symbol.char)
+        for value in candidates:
+            text = (value or "").strip()
+            if len(text) == 1:
+                return text
+        return ""
+
+    def _target_phrase(self, target: str, ex) -> str:
+        """صيغة نطق واضحة للحرف/الرقم المطلوب تعلّمه."""
+        language = (ex.language or "ar").lower()
+        if language == "en":
             if target.isdigit():
-                phrase = f"Number {self._DIGIT_WORDS_EN.get(target, target)}"
-            else:
-                phrase = target
-        else:
-            if target.isdigit():
-                phrase = f"رقم {self._DIGIT_WORDS_AR.get(target, target)}"
-            else:
-                phrase = f"حرف {target}"
-        self.context.speak(phrase, ex.language)
+                return f"Number {self._DIGIT_WORDS_EN.get(target, target)}"
+            return f"Letter {target}"
+        if target.isdigit():
+            return f"رقم {self._DIGIT_WORDS_AR.get(target, target)}"
+        return f"حرف {target}"
 
     def _speak_feedback(self, feedback, ex) -> None:
         """انطق نتيجة الإجابة مع عبارة تشجيع من داخل التطبيق."""
@@ -680,6 +783,10 @@ class LessonPanel(BasePanel):
                 cell.set_scale(theme.cell_scale())
             if self._braille_label is not None:
                 self._braille_label.SetFont(theme.make_braille_font(30.0))
+            if self._target_label is not None:
+                target_font = theme.make_font(20.0)
+                target_font.SetWeight(wx.FONTWEIGHT_BOLD)
+                self._target_label.SetFont(target_font)
         except Exception:
             pass
         self.Refresh()

@@ -13,6 +13,7 @@ from braille_go.core.curriculum import LEVELS
 
 from . import i18n
 from . import theme as theme_mod
+from . import widgets as W
 from .context import WxAppContext
 from .lesson_view import LessonPanel
 from .screens import (
@@ -62,6 +63,8 @@ class MainFrame(wx.Frame):
         self.ID_ABOUT = wx.NewIdRef()
 
         self._current_id = ""
+        self._current_kwargs: dict = {}
+        self._history: list[tuple[str, dict]] = []
         self._panels: dict[str, object] = {}
 
         self.CreateStatusBar(2)
@@ -71,9 +74,10 @@ class MainFrame(wx.Frame):
         self._container_sizer = wx.BoxSizer(wx.VERTICAL)
         self._container.SetSizer(self._container_sizer)
 
-        root = wx.BoxSizer(wx.VERTICAL)
-        root.Add(self._container, 1, wx.EXPAND)
-        self.SetSizer(root)
+        self._root_sizer = wx.BoxSizer(wx.VERTICAL)
+        self._root_sizer.Add(self._container, 1, wx.EXPAND)
+        self._build_navbar()
+        self.SetSizer(self._root_sizer)
 
         self._build_panels()
         self._build_menu()
@@ -117,6 +121,49 @@ class MainFrame(wx.Frame):
             panel.Hide()
             self._container_sizer.Add(panel, 1, wx.EXPAND)
             self._panels[screen_id] = panel
+
+    def _build_navbar(self) -> None:
+        """شريط تنقّل قياسي أسفل النافذة: رجوع / الرئيسية / خروج.
+
+        يمنح المستخدم أزرارًا مألوفة كما في برامج ويندوز، ويعمل مع مفتاح Esc
+        (رجوع) ومع مفتاح الإدخال (تشغيل الزر المُركَّز عليه).
+        """
+        self._navbar = wx.Panel(self)
+        self._navbar.SetName(i18n.t("nav_bar"))
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self._btn_back = W.action_button(
+            self._navbar, i18n.t("nav_back"),
+            on_click=self.go_back, tooltip=i18n.t("nav_back_tip"),
+        )
+        self._btn_home = W.action_button(
+            self._navbar, i18n.t("nav_home"),
+            on_click=lambda: self.navigate_to("home"), tooltip=i18n.t("nav_home_tip"),
+        )
+        self._btn_exit = W.action_button(
+            self._navbar, i18n.t("btn_exit"),
+            on_click=self.Close, tooltip=i18n.t("btn_exit_tip"),
+        )
+        sizer.Add(self._btn_back, 0, wx.ALL, 6)
+        sizer.Add(self._btn_home, 0, wx.ALL, 6)
+        sizer.Add((0, 0), 1, wx.EXPAND)
+        sizer.Add(self._btn_exit, 0, wx.ALL, 6)
+        self._navbar.SetSizer(sizer)
+        self._root_sizer.Add(self._navbar, 0, wx.EXPAND)
+
+    def _update_navbar_labels(self) -> None:
+        """حدّث نصوص شريط التنقّل بعد تغيير اللغة."""
+        try:
+            for button, key in (
+                (self._btn_back, "nav_back"),
+                (self._btn_home, "nav_home"),
+                (self._btn_exit, "btn_exit"),
+            ):
+                button.SetLabel(i18n.t(key))
+                button.SetName(i18n.t(key))
+            self._navbar.SetName(i18n.t("nav_bar"))
+            self._navbar.Layout()
+        except Exception:
+            pass
 
     def _build_menu(self) -> None:
         bar = wx.MenuBar()
@@ -281,9 +328,23 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
 
     def _on_char_hook(self, event) -> None:
-        """اعتراض مفتاح الإدخال (Enter) وتوجيهه إلى الشاشة الحالية."""
+        """اعتراض مفاتيح الإدخال (Enter) و«Esc» وتوجيهها إلى الشاشة الحالية."""
         code = event.GetKeyCode()
-        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and not event.ControlDown() and not event.AltDown():
+        control = getattr(event, "ControlDown", lambda: False)()
+        alt = getattr(event, "AltDown", lambda: False)()
+        if code == wx.WXK_ESCAPE and not control and not alt:
+            # «Esc» = رجوع إلى الشاشة السابقة (سلوك مألوف في ويندوز).
+            if self.go_back():
+                return
+            event.Skip()
+            return
+        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and not control and not alt:
+            # إن كان التركيز على زر (مثل أزرار شريط التنقّل أو أزرار الخيارات)
+            # نترك ويندوز يتعامل مع مفتاح الإدخال طبيعيًا فيعمل الزر.
+            focused = wx.Window.FindFocus()
+            if isinstance(focused, wx.Button):
+                event.Skip()
+                return
             panel = self.current_panel
             method = getattr(panel, "on_enter", None)
             if callable(method):
@@ -297,10 +358,14 @@ class MainFrame(wx.Frame):
     # ------------------------------------------------------------------
     # التنقّل
     # ------------------------------------------------------------------
-    def navigate_to(self, screen_id: str, **kwargs) -> None:
+    def navigate_to(self, screen_id: str, _record: bool = True, **kwargs) -> None:
         panel = self._panels.get(screen_id)
         if panel is None:
             return
+        if _record and self._current_id and self._current_id != screen_id:
+            self._history.append((self._current_id, dict(self._current_kwargs)))
+            if len(self._history) > 50:
+                self._history.pop(0)
         previous = self._panels.get(self._current_id)
         if previous is not None and previous is not panel:
             deactivate = getattr(previous, "deactivate", None)
@@ -313,12 +378,29 @@ class MainFrame(wx.Frame):
             other.Hide()
         panel.Show()
         self._current_id = screen_id
+        self._current_kwargs = dict(kwargs)
         self._container.Layout()
         activate = getattr(panel, "activate", None)
         if callable(activate):
             activate(**kwargs)
         self.refresh_status()
         wx.CallAfter(self._focus_current)
+
+    def go_back(self) -> bool:
+        """العودة إلى الشاشة السابقة (زر «رجوع» أو مفتاح Esc).
+
+        تُعيد ``True`` إن انتقلت فعلًا، و``False`` إن لم يوجد ما يعود إليه
+        (فنبقى في الشاشة الحالية إن كانت الرئيسية).
+        """
+        while self._history:
+            previous_id, previous_kwargs = self._history.pop()
+            if previous_id in self._panels and previous_id != self._current_id:
+                self.navigate_to(previous_id, _record=False, **previous_kwargs)
+                return True
+        if self._current_id != "home":
+            self.navigate_to("home", _record=False)
+            return True
+        return False
 
     def _focus_current(self) -> None:
         panel = self._panels.get(self._current_id)
@@ -474,11 +556,13 @@ class MainFrame(wx.Frame):
 
     def rebuild_ui(self) -> None:
         """أعِد بناء الواجهة (يُستخدم عند تغيير اللغة)."""
+        self._history = []
         self._container_sizer.Clear(True)
         self._panels = {}
         self._build_panels()
         self._build_menu()
         self._build_accelerators()
+        self._update_navbar_labels()
         self._apply_layout_direction()
         self.apply_theme()
         self.navigate_to("home")

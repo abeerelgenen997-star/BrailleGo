@@ -81,12 +81,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "reduce_motion": False,
     "text_color": "",                # فارغ = اتبع الثيم
     "background_color": "",
-    "dot_color": "#1a1a1a",
-    "dot_empty_color": "#c9c9c9",
-    "dot_border_color": "#4a4a4a",
+    "dot_color": "#0d0d0d",
+    "dot_empty_color": "#9aa4b0",
+    "dot_border_color": "#2f363e",
     # الأصوات والنطق
     "sound_enabled": True,
-    "speech_enabled": False,
+    "speech_enabled": True,
     "speech_rate": 0.0,              # -1.0 (بطيء) .. 1.0 (سريع)
     "volume": 1.0,                   # 0.0 .. 1.0
     "speech_voice": "",              # اسم الصوت إن وُجد

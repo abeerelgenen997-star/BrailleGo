@@ -81,6 +81,20 @@ class _DotCanvas(wx.Panel):
         self._refresh_accessible()
 
     # ------------------------------------------------------------------
+    # التركيز والتنقّل بـ Tab
+    # ------------------------------------------------------------------
+    def AcceptsFocus(self) -> bool:  # noqa: N802 - wx naming
+        """اجعل الخلية قابلة للتركيز بـ Tab حتى يصلها المستخدم ويعود منها.
+
+        لوحات wx لا تقبل التركيز افتراضيًا، وبدون ذلك لا يستطيع المستخدم
+        الوصول إلى الخلية بمفتاح Tab (فتتوقّف المسافة والأسهم عن العمل).
+        """
+        return bool(self._interactive)
+
+    def AcceptsFocusFromKeyboard(self) -> bool:  # noqa: N802 - wx naming
+        return bool(self._interactive)
+
+    # ------------------------------------------------------------------
     # إعدادات
     # ------------------------------------------------------------------
     def set_theme(self, theme) -> None:
@@ -179,7 +193,8 @@ class _DotCanvas(wx.Panel):
     # الرسم
     # ------------------------------------------------------------------
     def DoGetBestSize(self) -> wx.Size:  # noqa: N802 - wx naming
-        return wx.Size(int(110 * self._scale), int(150 * self._scale))
+        # خلية أكبر قليلًا لتسهيل تحديد النقاط ورؤيتها بوضوح.
+        return wx.Size(int(132 * self._scale), int(182 * self._scale))
 
     def _dot_geometry(self) -> dict[int, tuple[float, float, float]]:
         width = max(1, self.GetClientSize().width)
@@ -223,7 +238,7 @@ class _DotCanvas(wx.Panel):
                 pen = gc.CreatePen(wx.Pen(wx.Colour(_hex(colours["dot_border"])), int(max(2, 2 * self._scale))))
             else:
                 gc.SetBrush(wx.Brush(wx.Colour(_hex(colours["dot_off"]))))
-                pen = gc.CreatePen(wx.Pen(wx.Colour(_hex(colours["dot_border"])), int(max(1, 1.5 * self._scale))))
+                pen = gc.CreatePen(wx.Pen(wx.Colour(_hex(colours["dot_border"])), int(max(2, 2.0 * self._scale))))
             gc.SetPen(pen)
             gc.DrawEllipse(cx - radius, cy - radius, radius * 2, radius * 2)
 
@@ -281,11 +296,23 @@ class _DotCanvas(wx.Panel):
             self.toggle_dot(_NUMBER_KEYS[code])
             return
         if code == wx.WXK_SPACE:
+            # مفتاح المسافة يبدّل حالة النقطة عندها: ضغطة تُحدّدها وضغطة
+            # أخرى تُلغي تحديدها.
             self.toggle_dot(self._cursor)
             return
         if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
             if self.on_confirm is not None:
                 self.on_confirm()
+            return
+        if code == wx.WXK_TAB:
+            # Tab ينقل التركيز إلى زرّي «تأكيد الإجابة» و«مسح» كما في برامج
+            # ويندوز؛ Shift+Tab يعود للخلف.
+            backward = event.ShiftDown()
+            flags = (
+                wx.NavigationKeyEvent.IsBackward if backward
+                else wx.NavigationKeyEvent.IsForward
+            )
+            self.Navigate(flags=flags)
             return
         if code in (wx.WXK_BACK, wx.WXK_DELETE):
             self.clear()
