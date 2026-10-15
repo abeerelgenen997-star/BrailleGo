@@ -1,13 +1,13 @@
 # =====================================================================
-#  Braille Go — النسخة المحمولة (ملف واحد) إعادة تجميع
-#  Braille Go — Standalone (single-file) reassembly
+#  Braille Go v1.2.0 — إعادة تجميع الحزم المُجزّأة والتحقق من السلامة
+#  Braille Go — reassemble split packages and verify integrity
 #
-#  ضع هذا الملف في نفس المجلد الذي يحتوي على ملفات الأجزاء:
-#     BrailleGo-Standalone.exe.part01 ... partNN
-#  ثم شغّله بالزر الأيمن ← "Run with PowerShell"
-#  (أو من الطرفية:  powershell -ExecutionPolicy Bypass -File JOIN_AND_RUN.ps1 )
+#  ضع هذا الملف في نفس مجلد ملفات الأجزاء، ثم شغّله.
+#  سيُعيد تجميع كل حزمة موجودة أجزاؤها إلى ملف واحد ويتحقق من SHA-256:
+#     BrailleGo-Standalone.exe.partNN  ->  BrailleGo.exe
+#     BrailleGo-Setup-1.2.0.exe.partNN ->  BrailleGo-Setup-1.2.0.exe
 #
-#  الناتج: ملف واحد  BrailleGo.exe  — شغّله بضغطة مزدوجة.
+#  التشغيل:  powershell -ExecutionPolicy Bypass -File JOIN_AND_RUN.ps1
 # =====================================================================
 
 $ErrorActionPreference = "Stop"
@@ -15,41 +15,70 @@ $ErrorActionPreference = "Stop"
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $dir
 
-Write-Host "Braille Go — reassembling standalone app..." -ForegroundColor Cyan
-
-$parts = Get-ChildItem -Filter "BrailleGo-Standalone.exe.part*" -ErrorAction SilentlyContinue | Sort-Object Name
-if (-not $parts -or $parts.Count -eq 0) {
-    Write-Error "لم يتم العثور على ملفات الأجزاء في: $dir`nNo part files found in this folder."
+# بصمات SHA-256 المتوقّعة (الإصدار 1.2.0)
+$EXPECTED = @{
+    "BrailleGo-Standalone.exe"   = "A7100F6F351B5515A6099C6432B2E427A4813A8BBE9CB5C0FDB98D944B61B629"
+    "BrailleGo-Setup-1.2.0.exe"  = "35B8EB70B224816CFEB3F803CC2A6D43FEF72BE99280447947283BE92528145D"
 }
 
-Write-Host ("Found {0} part(s)." -f $parts.Count)
+# الاسم النهائي لكل حزمة (المفتاح = بادئة ملفات الأجزاء).
+$FINAL_NAME = @{
+    "BrailleGo-Standalone.exe"  = "BrailleGo.exe"
+    "BrailleGo-Setup-1.2.0.exe" = "BrailleGo-Setup-1.2.0.exe"
+}
 
-$exe = Join-Path $dir "BrailleGo.exe"
-if (Test-Path $exe) { Remove-Item $exe -Force }
+function Join-Package {
+    param(
+        [Parameter(Mandatory = $true)][string]$Prefix
+    )
 
-# دمج الأجزاء بالترتيب إلى ملف تنفيذي واحد
-$out = [System.IO.File]::Create($exe)
-try {
-    foreach ($p in $parts) {
-        $bytes = [System.IO.File]::ReadAllBytes($p.FullName)
-        $out.Write($bytes, 0, $bytes.Length)
+    $parts = Get-ChildItem -Filter "$Prefix.part*" -ErrorAction SilentlyContinue | Sort-Object Name
+    if (-not $parts -or $parts.Count -eq 0) {
+        return $false
     }
-} finally {
-    $out.Close()
+
+    $final = $FINAL_NAME[$Prefix]
+    $target = Join-Path $dir $final
+    if (Test-Path $target) { Remove-Item $target -Force }
+
+    Write-Host ("Reassembling {0} from {1} part(s)..." -f $final, $parts.Count) -ForegroundColor Cyan
+
+    $out = [System.IO.File]::Create($target)
+    try {
+        foreach ($p in $parts) {
+            $bytes = [System.IO.File]::ReadAllBytes($p.FullName)
+            $out.Write($bytes, 0, $bytes.Length)
+        }
+    } finally {
+        $out.Close()
+    }
+
+    $expected = $EXPECTED[$Prefix]
+    if ($expected) {
+        $actual = (Get-FileHash $target -Algorithm SHA256).Hash
+        Write-Host ("SHA256: {0}" -f $actual)
+        if ($actual -ne $expected) {
+            Write-Warning "تحذير: بصمة $final لا تطابق المتوقّع. قد يكون التنزيل غير مكتمل أو تالفًا."
+            Write-Warning "Checksum mismatch for $final."
+        } else {
+            Write-Host "تم التحقق من السلامة بنجاح. / Integrity OK." -ForegroundColor Green
+        }
+    }
+
+    Write-Host ("  -> {0}" -f $target) -ForegroundColor Green
+    return $true
 }
 
-# التحقق من السلامة (SHA-256)
-$expected = "74D9CE2FDA2A4FF37887F4BEEBC54F7F12A0E7E80B5D890C226EC06AEE2A2884"
-$actual = (Get-FileHash $exe -Algorithm SHA256).Hash
-Write-Host ("SHA256: {0}" -f $actual)
-if ($actual -ne $expected) {
-    Write-Warning "تحذير: بصمة الملف لا تطابق المتوقّع. قد يكون التنزيل غير مكتمل أو تالفًا."
-    Write-Warning "Checksum mismatch — the download may be incomplete or corrupted."
-} else {
-    Write-Host "تم التحقق من السلامة بنجاح. / Integrity check passed." -ForegroundColor Green
+$didAnything = $false
+foreach ($prefix in $EXPECTED.Keys) {
+    if (Join-Package -Prefix $prefix) { $didAnything = $true }
+}
+
+if (-not $didAnything) {
+    Write-Error "لم يتم العثور على أي ملفات أجزاء (*.exe.part*) في: $dir"
 }
 
 Write-Host ""
-Write-Host "تم! شغّل التطبيق بالنقر المزدوج على:" -ForegroundColor Green
-Write-Host ("  {0}" -f $exe)
-Write-Host "Done. Just double-click the file above to run Braille Go."
+Write-Host "تم. / Done." -ForegroundColor Green
+Write-Host "  BrailleGo.exe               : شغّله مباشرة (نسخة محمولة)."
+Write-Host "  BrailleGo-Setup-1.2.0.exe   : ثبّت البرنامج على الجهاز."
