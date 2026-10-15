@@ -14,4 +14,4 @@ The package is organised as follows::
 __all__ = ["__app_name__", "__version__"]
 
 __app_name__ = "Braille Go"
-__version__ = "1.2.0"
+__version__ = "1.3.0"

@@ -101,16 +101,20 @@ class LessonPanel(BasePanel):
         asizer.Add(self._answer_box, 0, wx.EXPAND | wx.ALL, 4)
         self._answer_box.Hide()
 
-        # خلايا البناء -------------------------------------------------
+        # خلايا البناء (تظهر متوسّطة أفقيًا في منتصف الشاشة) ------------
         self._cells_panel = wx.Panel(self)
         cells_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self._cells_panel.SetSizer(cells_sizer)
-        self.content.Add(self._cells_panel, 0, wx.EXPAND | wx.ALL, 8)
+        cells_outer = wx.BoxSizer(wx.HORIZONTAL)
+        cells_outer.AddStretchSpacer(1)
+        cells_outer.Add(self._cells_panel, 0, wx.ALL, 8)
+        cells_outer.AddStretchSpacer(1)
+        self.content.Add(cells_outer, 0, wx.EXPAND)
 
         # شريط الأزرار -------------------------------------------------
         buttons = wx.BoxSizer(wx.HORIZONTAL)
         self._btn_clear = W.action_button(self, "مسح النقاط", on_click=self._clear, tooltip="Ctrl+Delete")
-        self._btn_confirm = W.action_button(self, "تأكيد الإجابة", on_click=self._on_confirm, primary=True, tooltip="Ctrl+Enter")
+        self._btn_confirm = W.action_button(self, "تأكيد الإجابة", on_click=self._on_confirm, primary=True, tooltip="Enter")
         self._btn_next = W.action_button(self, "السؤال التالي", on_click=self._next, tooltip="Ctrl+N")
         self._btn_next.Hide()
         buttons.Add(self._btn_clear, 0, wx.RIGHT, 8)
@@ -249,9 +253,63 @@ class LessonPanel(BasePanel):
         self._banner.SetLabel("")
 
         self.context.speak_guidance(ex.speak_prompt(), ex.language)
+        self._announce_target(ex)
 
         # التركيز على صندوق السؤال أو حقل الإجابة.
         wx.CallAfter(self._focus_initial)
+
+    #: أسماء الأرقام العربية للنطق الواضح.
+    _DIGIT_WORDS_AR = {
+        "0": "صفر", "1": "واحد", "2": "اثنان", "3": "ثلاثة", "4": "أربعة",
+        "5": "خمسة", "6": "ستة", "7": "سبعة", "8": "ثمانية", "9": "تسعة",
+    }
+    _DIGIT_WORDS_EN = {
+        "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four",
+        "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine",
+    }
+
+    def _announce_target(self, ex) -> None:
+        """انطق الحرف أو الرقم المطلوب بصوت من داخل التطبيق.
+
+        تُفعَّل هذه الميزة عبر إعداد ``announce_symbols``، وتُساعد المتعلّم
+        الكفيف على معرفة الحرف/الرقم الحالي مباشرة دون قراءة الشاشة.
+        """
+        try:
+            if not bool(self.context.settings.get("announce_symbols", True)):
+                return
+        except Exception:
+            return
+        # في وضع الاختبار لا نُعلن الرمز حتى لا نفشي الإجابة.
+        if self._mode == "exam":
+            return
+        target = (ex.correct_answer or ex.stimulus_text or "").strip()
+        if len(target) != 1:
+            return
+        if ex.language == "en":
+            if target.isdigit():
+                phrase = f"Number {self._DIGIT_WORDS_EN.get(target, target)}"
+            else:
+                phrase = target
+        else:
+            if target.isdigit():
+                phrase = f"رقم {self._DIGIT_WORDS_AR.get(target, target)}"
+            else:
+                phrase = f"حرف {target}"
+        self.context.speak(phrase, ex.language)
+
+    def _speak_feedback(self, feedback, ex) -> None:
+        """انطق نتيجة الإجابة مع عبارة تشجيع من داخل التطبيق."""
+        try:
+            encourage = bool(self.context.settings.get("encouragement_enabled", True))
+        except Exception:
+            encourage = True
+        spoken = feedback.spoken
+        if encourage:
+            if feedback.correct:
+                spoken = ("أحسنت! " if ex.language != "en" else "Well done! ") + spoken
+            else:
+                spoken = ("لا بأس، " if ex.language != "en" else "No worries, ") + spoken
+        self.context.speak(spoken, ex.language)
 
     def _focus_initial(self) -> None:
         ex = self._exercises[self._index] if self._index < len(self._exercises) else None
@@ -314,7 +372,7 @@ class LessonPanel(BasePanel):
         if mode is AnswerMode.TYPE_TEXT:
             response = self._answer_box.GetValue() if self._answer_box is not None else ""
             if not response.strip():
-                self._banner.SetLabel("اكتب إجابة في الحقل ثم اضغط تأكيد (Ctrl+Enter).")
+                self._banner.SetLabel("اكتب إجابة في الحقل ثم اضغط مفتاح الإدخال (Enter) للتأكيد.")
                 announce(self, "اكتب إجابة أولًا.")
                 return
         elif mode is AnswerMode.BUILD_CELLS:
@@ -339,7 +397,7 @@ class LessonPanel(BasePanel):
             self.context.sounds.correct()
         else:
             self.context.sounds.incorrect()
-        self.context.speak(feedback.spoken, ex.language)
+        self._speak_feedback(feedback, ex)
 
         text = feedback.title_ar
         if feedback.message_ar:
@@ -444,6 +502,21 @@ class LessonPanel(BasePanel):
         return False
 
     def confirm_action(self) -> bool:
+        if self._answered:
+            self._next()
+            return True
+        self._on_confirm()
+        return True
+
+    def on_enter(self) -> bool:
+        """مفتاح الإدخال (Enter): تأكيد الإجابة أو الانتقال للسؤال التالي.
+
+        هذا هو السلوك المطلوب صراحةً من المراجعة: التأكيد بمفتاح الإدخال وحده
+        (دون الحاجة إلى Ctrl+Enter).
+        """
+        if self._finished:
+            self.frame.navigate_to("home")
+            return True
         if self._answered:
             self._next()
             return True

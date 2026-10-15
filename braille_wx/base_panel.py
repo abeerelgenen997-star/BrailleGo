@@ -95,6 +95,14 @@ class BasePanel(wx.ScrolledWindow):
             pass
         return False
 
+    def on_enter(self) -> bool:
+        """يُستدعى عند الضغط على مفتاح الإدخال (Enter) في هذه الشاشة.
+
+        تُعيد ``True`` إذا عالجت الشاشة المفتاح (فلا يُمرَّر إلى العنصر الذي
+        يحمل التركيز)، أو ``False`` ليُترك السلوك الافتراضي (مثل تفعيل الزر).
+        """
+        return False
+
     def confirm_action(self) -> None:
         """موضع (Ctrl+Enter): تنفيذ الإجراء الرئيسي إن وُجد."""
         return False

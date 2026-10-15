@@ -92,6 +92,13 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "speech_voice": "",              # اسم الصوت إن وُجد
     "speech_locale": "",             # ar | en | فارغ = تلقائي
     "guidance_enabled": True,        # الإرشادات الصوتية للتطبيق
+    "encouragement_enabled": True,   # أصوات وعبارات التشجيع على الإجابة
+    "welcome_tune_enabled": True,    # موسيقى الترحيب عند أول تشغيل
+    "welcome_speech_enabled": True,  # نطق كلمة الترحيب عند أول تشغيل
+    "announce_symbols": True,        # نطق الحرف/الرقم تلقائيًا عند عرضه
+    # فئة المستخدم: instructor | sighted_learner | blind | low_vision
+    "user_profile": "sighted_learner",
+    "instructor_mode": False,        # يظهر أدوات المدرب (إدارة المتدربين والتقارير)
     # التعلّم
     "mastery_threshold": 85.0,       # نسبة الإتقان المطلوبة للانتقال
     "auto_confirm_answer": False,
@@ -110,13 +117,15 @@ _BOOL_KEYS = {
     "high_contrast", "reduce_motion", "sound_enabled", "speech_enabled",
     "guidance_enabled", "auto_confirm_answer", "show_dot_numbers",
     "bold_text", "guided_mode", "show_large_target", "welcome_shown",
+    "encouragement_enabled", "welcome_tune_enabled", "welcome_speech_enabled",
+    "announce_symbols", "instructor_mode",
 }
 _FLOAT_KEYS = {"font_scale", "braille_cell_scale", "speech_rate", "volume", "mastery_threshold", "line_spacing"}
 _INT_KEYS: set[str] = set()
 _STR_KEYS = {
     "theme", "display_mode", "text_color", "background_color", "dot_color", "dot_empty_color",
     "dot_border_color", "speech_voice", "speech_locale", "interface_language",
-    "last_lesson_key", "last_level_key",
+    "last_lesson_key", "last_level_key", "user_profile",
 }
 
 #: حدود مقبولة لكل مفتاح عددي.

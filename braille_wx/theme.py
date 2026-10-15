@@ -126,7 +126,68 @@ MODES: dict[str, DisplayMode] = {
         border="#666666", focus="#000000", success="#333333", error="#111111",
         dot_on="#000000", dot_off="#cccccc", dot_border="#666666",
     ),
+    # --- أنماط إضافية لفئات أخرى من المستخدمين -------------------------
+    "dyslexia": DisplayMode(
+        "dyslexia", "mode_dyslexia",
+        # خلفية كريمية دافئة تقلّل الوهج وتُريح القراءة لعُسر القراءة.
+        background="#fbf0d9", surface="#fff8e7", surface_alt="#f3e6c8",
+        text="#1b1b1b", muted="#3f3a2e", accent="#8a4b00", accent_text="#ffffff",
+        border="#b59a5e", focus="#d2691e", success="#0a6b2a", error="#a11212",
+        dot_on="#1b1b1b", dot_off="#e3d3a6", dot_border="#6b5a2e",
+        font_scale=1.35,
+    ),
+    "protanopia": DisplayMode(
+        "protanopia", "mode_protanopia",
+        # لوحة Okabe–Ito (أزرق/أصفر) مناسبة لمن لا يميّز الأحمر.
+        background="#ffffff", surface="#ffffff", surface_alt="#eef2f7",
+        text="#000000", muted="#3a3a3a", accent="#0072b2", accent_text="#ffffff",
+        border="#0072b2", focus="#f0e442", success="#009e73", error="#d55e00",
+        dot_on="#000000", dot_off="#d9d9d9", dot_border="#0072b2",
+    ),
+    "tritanopia": DisplayMode(
+        "tritanopia", "mode_tritanopia",
+        # بديل بألوان وردية/فيروزية لمن لا يميّز الأزرق.
+        background="#ffffff", surface="#ffffff", surface_alt="#f7eef2",
+        text="#000000", muted="#3a3a3a", accent="#cc79a7", accent_text="#ffffff",
+        border="#cc79a7", focus="#009e73", success="#0072b2", error="#d55e00",
+        dot_on="#000000", dot_off="#dcd0d8", dot_border="#cc79a7",
+    ),
+    "sepia": DisplayMode(
+        "sepia", "mode_sepia",
+        # خلفية سيبيا مريحة للعين تقلّل الإجهاد عند القراءة الطويلة.
+        background="#f4ecd8", surface="#faf3e0", surface_alt="#ece0c6",
+        text="#3b2f1e", muted="#5c4b34", accent="#8a5a00", accent_text="#ffffff",
+        border="#c0a878", focus="#a05a00", success="#3f6b2a", error="#8a2020",
+        dot_on="#3b2f1e", dot_off="#ddcfa8", dot_border="#7a6440",
+        font_scale=1.15,
+    ),
+    "oled_black": DisplayMode(
+        "oled_black", "mode_oled",
+        # أسود نقي مناسب لشاشات OLED وحساسية الضوء.
+        background="#000000", surface="#0a0a0a", surface_alt="#141414",
+        text="#ffffff", muted="#c8c8c8", accent="#4ea1ff", accent_text="#000000",
+        border="#4a4a4a", focus="#ffd24d", success="#5ddb92", error="#ff8080",
+        dot_on="#ffffff", dot_off="#2a2a2a", dot_border="#8a8a8a",
+    ),
+    "soft_pastel": DisplayMode(
+        "soft_pastel", "mode_soft_pastel",
+        # ألوان هادئة منخفضة الإثارة (مناسبة لفرط الحساسية الحسّية).
+        background="#eef3f7", surface="#f7fbfd", surface_alt="#e2ebf2",
+        text="#22303c", muted="#46586a", accent="#4a7a9b", accent_text="#ffffff",
+        border="#a9bfd0", focus="#d08a3a", success="#3f7d5a", error="#a2565a",
+        dot_on="#22303c", dot_off="#cfdde8", dot_border="#7f95a8",
+    ),
+    "senior": DisplayMode(
+        "senior", "mode_senior",
+        # خط كبير وتباين مرتفع لكبار السن والمبتدئين.
+        background="#ffffff", surface="#ffffff", surface_alt="#f2f2f2",
+        text="#000000", muted="#000000", accent="#003366", accent_text="#ffffff",
+        border="#000000", focus="#b30000", success="#006400", error="#990000",
+        dot_on="#000000", dot_off="#dddddd", dot_border="#222222",
+        font_scale=2.0, bold=True,
+    ),
 }
+
 
 
 def mode_choices() -> list[tuple[str, str]]:
@@ -204,6 +265,14 @@ class Theme:
             user = 1.0
         return max(0.6, min(3.0, user))
 
+    def line_spacing(self) -> float:
+        """تباعد الأسطر داخل صناديق النصوص المتعدّدة الأسطر."""
+        try:
+            value = float(self.settings.get("line_spacing", 1.0))
+        except (TypeError, ValueError):
+            value = 1.0
+        return max(1.0, min(2.5, value))
+
     def point_size(self, base: float = BASE_FONT_POINT_SIZE) -> float:
         return max(8.0, min(48.0, base * self.font_scale()))
 
@@ -256,6 +325,16 @@ def apply_theme_to(window: wx.Window, theme: Theme) -> None:
             elif isinstance(win, wx.TextCtrl):
                 win.SetBackgroundColour(surface)
                 win.SetForegroundColour(text)
+                try:
+                    spacing = theme.line_spacing()
+                    if spacing > 1.001 and (win.GetWindowStyleFlag() & wx.TE_MULTILINE):
+                        last = win.GetLastPosition()
+                        if last > 0:
+                            attr = wx.TextAttr()
+                            attr.SetLineSpacing(spacing)
+                            win.SetStyle(0, last, attr)
+                except Exception:
+                    pass
             elif isinstance(win, wx.StaticText):
                 win.SetForegroundColour(text)
             elif isinstance(win, (wx.Button, wx.CheckBox, wx.RadioButton,

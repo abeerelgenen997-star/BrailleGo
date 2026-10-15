@@ -10,8 +10,10 @@ import wx
 from braille_go.core.curriculum import LEVELS, LEVELS_BY_KEY, first_lesson, level_of_lesson
 
 from . import i18n
+from . import profiles
 from . import theme as theme_mod
 from . import widgets as W
+from .a11y import announce
 from .base_panel import BasePanel, clear_sizer
 
 
@@ -41,7 +43,7 @@ class WelcomePanel(BasePanel):
 
         self._button = W.action_button(
             self, i18n.t("start_learning"), primary=True,
-            on_click=self._go_home, tooltip="Ctrl+Enter",
+            on_click=self._go_home, tooltip="Enter",
         )
         self.content.Add(self._button, 0, wx.ALIGN_CENTER | wx.ALL, 20)
         self.content.AddStretchSpacer(1)
@@ -49,12 +51,21 @@ class WelcomePanel(BasePanel):
         self.finish_layout()
 
     def activate(self, **kwargs) -> None:
+        settings = self.context.settings
+        # موسيقى ترحيبية من داخل التطبيق (نغمة مولّدة، بلا ملفات خارجية).
+        if bool(settings.get("welcome_tune_enabled", True)):
+            try:
+                self.context.sounds.welcome_tune()
+            except Exception:
+                pass
+        # نطق كلمة الترحيب بصوت من داخل التطبيق.
+        if bool(settings.get("welcome_speech_enabled", True)):
+            try:
+                self.context.speak(i18n.t("welcome_speak"), settings.get("speech_locale") or None)
+            except Exception:
+                pass
         try:
-            self.context.speak(i18n.t("welcome_speak"), self.context.settings.get("speech_locale") or None)
-        except Exception:
-            pass
-        try:
-            self.context.settings.set("welcome_shown", True)
+            settings.set("welcome_shown", True)
         except Exception:
             pass
         if self._button is not None:
@@ -76,6 +87,10 @@ class WelcomePanel(BasePanel):
         self._go_home()
         return True
 
+    def on_enter(self) -> bool:
+        self._go_home()
+        return True
+
 
 # ----------------------------------------------------------------------
 # الرئيسية
@@ -83,6 +98,8 @@ class WelcomePanel(BasePanel):
 class HomePanel(BasePanel):
     def __init__(self, parent: wx.Window, context, frame) -> None:
         super().__init__(parent, context, frame)
+
+    def activate(self, **kwargs) -> None:
         clear_sizer(self.content)
         self.content.Add(W.heading(self, "Braille Go", self.theme), 0, wx.ALL, 8)
         self.content.Add(
@@ -94,6 +111,8 @@ class HomePanel(BasePanel):
             0, wx.EXPAND | wx.ALL, 10,
         )
 
+        instructor_mode = bool(self.context.settings.get("instructor_mode", False))
+
         row = wx.BoxSizer(wx.HORIZONTAL)
         self.content.Add(row, 0, wx.EXPAND | wx.ALL, 6)
 
@@ -101,6 +120,7 @@ class HomePanel(BasePanel):
         lsizer.Add(W.action_button(learn, i18n.t("start_learning"), primary=True, on_click=self._start), 0, wx.EXPAND | wx.ALL, 4)
         lsizer.Add(W.action_button(learn, i18n.t("continue_last"), on_click=self._continue), 0, wx.EXPAND | wx.ALL, 4)
         lsizer.Add(W.action_button(learn, i18n.t("lessons_levels"), on_click=lambda: self.frame.navigate_to("lessons")), 0, wx.EXPAND | wx.ALL, 4)
+        lsizer.Add(W.action_button(learn, i18n.t("alphabet_guide"), on_click=lambda: self.frame.navigate_to("alphabet")), 0, wx.EXPAND | wx.ALL, 4)
 
         practice, psizer = W.card(self, row, "التدريب")
         psizer.Add(W.action_button(practice, "التدريب العام", on_click=lambda: self.frame.navigate_to("practice")), 0, wx.EXPAND | wx.ALL, 4)
@@ -109,7 +129,9 @@ class HomePanel(BasePanel):
 
         track, tsizer = W.card(self, row, "المتابعة")
         tsizer.Add(W.action_button(track, i18n.t("progress"), on_click=lambda: self.frame.navigate_to("progress")), 0, wx.EXPAND | wx.ALL, 4)
-        tsizer.Add(W.action_button(track, i18n.t("instructor"), on_click=lambda: self.frame.navigate_to("instructor")), 0, wx.EXPAND | wx.ALL, 4)
+        # أدوات المدرب تظهر فقط عند اختيار فئة "مدرب".
+        if instructor_mode:
+            tsizer.Add(W.action_button(track, i18n.t("instructor"), on_click=lambda: self.frame.navigate_to("instructor")), 0, wx.EXPAND | wx.ALL, 4)
         tsizer.Add(W.action_button(track, i18n.t("settings"), on_click=lambda: self.frame.navigate_to("settings")), 0, wx.EXPAND | wx.ALL, 4)
         tsizer.Add(W.action_button(track, i18n.t("help"), on_click=lambda: self.frame.navigate_to("help")), 0, wx.EXPAND | wx.ALL, 4)
 
@@ -311,6 +333,32 @@ class SettingsPanel(BasePanel):
 
         self.content.Add(W.heading(self, i18n.t("settings"), self.theme), 0, wx.ALL, 8)
 
+        # فئة المستخدم --------------------------------------------------
+        # مطلب المراجعة: يحدّد المستخدم فئته (مدرب / متدرب مبصر / كفيف /
+        # ضعيف بصر) فيضبط التطبيق الإعدادات المناسبة تلقائيًا حسب تعليمات
+        # مستر فادي.
+        ppanel, psizer = W.card(self, self.content, i18n.t("user_profile"))
+        psizer.Add(W.wrapped_text(ppanel, i18n.t("user_profile_desc")), 0, wx.EXPAND | wx.ALL, 4)
+        choices = profiles.profile_choices()
+        self._profile_keys = [key for key, _, _ in choices]
+        self._profile_labels = [label for _, label, _ in choices]
+        self._profile_desc = {key: desc for key, _, desc in choices}
+        self._profile = wx.RadioBox(
+            ppanel,
+            choices=[f"{label} — {desc}" for _, label, desc in choices],
+            majorDimension=1,
+            style=wx.RA_SPECIFY_ROWS,
+        )
+        self._profile.SetName(i18n.t("user_profile"))
+        current_profile = str(s.get("user_profile", profiles.DEFAULT_PROFILE))
+        if current_profile in self._profile_keys:
+            self._profile.SetSelection(self._profile_keys.index(current_profile))
+        self._profile.Bind(wx.EVT_RADIOBOX, self._on_profile_change)
+        psizer.Add(self._profile, 0, wx.EXPAND | wx.ALL, 4)
+        self._instructor = wx.CheckBox(ppanel, label=i18n.t("instructor_mode"))
+        self._instructor.SetValue(bool(s.get("instructor_mode", False)))
+        psizer.Add(self._instructor, 0, wx.ALL, 4)
+
         # أنماط العرض --------------------------------------------------
         panel, sizer = W.card(self, self.content, i18n.t("display_mode"))
         sizer.Add(W.wrapped_text(panel, i18n.t("display_mode_desc")), 0, wx.EXPAND | wx.ALL, 4)
@@ -341,6 +389,12 @@ class SettingsPanel(BasePanel):
         self._bold.SetName(i18n.t("bold_text"))
         sizer.Add(self._bold, 0, wx.ALL, 4)
 
+        sizer.Add(W.body(panel, i18n.t("line_spacing")), 0, wx.ALL, 2)
+        self._line_spacing = wx.SpinCtrlDouble(panel, min=1.0, max=2.5, inc=0.05)
+        self._line_spacing.SetValue(float(s.get("line_spacing", 1.0)))
+        self._line_spacing.SetName(i18n.t("line_spacing"))
+        sizer.Add(self._line_spacing, 0, wx.EXPAND | wx.ALL, 4)
+
         self._dot_numbers = wx.CheckBox(panel, label=i18n.t("show_dot_numbers"))
         self._dot_numbers.SetValue(bool(s.get("show_dot_numbers", True)))
         sizer.Add(self._dot_numbers, 0, wx.ALL, 4)
@@ -359,8 +413,8 @@ class SettingsPanel(BasePanel):
         self._dot_on = self._add_color_row(cpanel, csizer, "لون النقاط المحدّدة", s.get("dot_color", "") or self.theme.colors["dot_on"])
         self._dot_off = self._add_color_row(cpanel, csizer, "لون النقاط غير المحدّدة", s.get("dot_empty_color", "") or self.theme.colors["dot_off"])
 
-        # الصوت والنطق ------------------------------------------------
-        spanel, ssizer = W.card(self, self.content, "الصوت والنطق")
+        # الصوت والنطق والتشجيع ----------------------------------------
+        spanel, ssizer = W.card(self, self.content, i18n.t("audio_section"))
         self._sound = wx.CheckBox(spanel, label="تشغيل الأصوات")
         self._sound.SetValue(bool(s.get("sound_enabled", True)))
         ssizer.Add(self._sound, 0, wx.ALL, 4)
@@ -370,6 +424,18 @@ class SettingsPanel(BasePanel):
         self._guidance = wx.CheckBox(spanel, label="الإرشادات الصوتية")
         self._guidance.SetValue(bool(s.get("guidance_enabled", True)))
         ssizer.Add(self._guidance, 0, wx.ALL, 4)
+        self._encouragement = wx.CheckBox(spanel, label=i18n.t("encouragement_enabled"))
+        self._encouragement.SetValue(bool(s.get("encouragement_enabled", True)))
+        ssizer.Add(self._encouragement, 0, wx.ALL, 4)
+        self._announce_symbols = wx.CheckBox(spanel, label=i18n.t("announce_symbols"))
+        self._announce_symbols.SetValue(bool(s.get("announce_symbols", True)))
+        ssizer.Add(self._announce_symbols, 0, wx.ALL, 4)
+        self._welcome_tune = wx.CheckBox(spanel, label=i18n.t("welcome_tune_enabled"))
+        self._welcome_tune.SetValue(bool(s.get("welcome_tune_enabled", True)))
+        ssizer.Add(self._welcome_tune, 0, wx.ALL, 4)
+        self._welcome_speech = wx.CheckBox(spanel, label=i18n.t("welcome_speech_enabled"))
+        self._welcome_speech.SetValue(bool(s.get("welcome_speech_enabled", True)))
+        ssizer.Add(self._welcome_speech, 0, wx.ALL, 4)
         ssizer.Add(W.body(spanel, "مستوى الصوت"), 0, wx.ALL, 2)
         self._volume = wx.SpinCtrlDouble(spanel, min=0.0, max=1.0, inc=0.05)
         self._volume.SetValue(float(s.get("volume", 1.0)))
@@ -399,7 +465,7 @@ class SettingsPanel(BasePanel):
 
         # الأزرار ------------------------------------------------------
         buttons = wx.BoxSizer(wx.HORIZONTAL)
-        buttons.Add(W.action_button(self, i18n.t("save_settings"), primary=True, on_click=self._apply, tooltip="Ctrl+Enter"), 0, wx.RIGHT, 8)
+        buttons.Add(W.action_button(self, i18n.t("save_settings"), primary=True, on_click=self._apply, tooltip="Enter"), 0, wx.RIGHT, 8)
         buttons.Add(W.action_button(self, i18n.t("reset_defaults"), on_click=self._reset), 0)
         self.content.Add(buttons, 0, wx.ALL, 8)
 
@@ -420,6 +486,38 @@ class SettingsPanel(BasePanel):
         if index < 0:
             return
         self.context.settings.set("display_mode", self._mode_keys[index])
+        wx.CallAfter(self.frame.apply_theme, True)
+
+    def _on_profile_change(self, event) -> None:
+        """طبّق الإعدادات المقترحة لفئة المستخدم كمعاينة فورية."""
+        if self._building:
+            return
+        index = self._profile.GetSelection()
+        if index < 0:
+            return
+        key = self._profile_keys[index]
+        values = profiles.profile_settings(key)
+        if not values:
+            return
+        mode = values.get("display_mode")
+        if mode in self._mode_keys:
+            self._mode.SetSelection(self._mode_keys.index(mode))
+            self.context.settings.set("display_mode", mode)
+        self._font.SetValue(float(values.get("font_scale", self._font.GetValue())))
+        self._cell.SetValue(float(values.get("braille_cell_scale", self._cell.GetValue())))
+        self._bold.SetValue(bool(values.get("bold_text", self._bold.GetValue())))
+        self._dot_numbers.SetValue(bool(values.get("show_dot_numbers", self._dot_numbers.GetValue())))
+        self._reduce_motion.SetValue(bool(values.get("reduce_motion", self._reduce_motion.GetValue())))
+        self._sound.SetValue(bool(values.get("sound_enabled", self._sound.GetValue())))
+        self._speech.SetValue(bool(values.get("speech_enabled", self._speech.GetValue())))
+        self._guidance.SetValue(bool(values.get("guidance_enabled", self._guidance.GetValue())))
+        self._encouragement.SetValue(bool(values.get("encouragement_enabled", self._encouragement.GetValue())))
+        self._announce_symbols.SetValue(bool(values.get("announce_symbols", self._announce_symbols.GetValue())))
+        self._guided.SetValue(bool(values.get("guided_mode", self._guided.GetValue())))
+        self._large_target.SetValue(bool(values.get("show_large_target", self._large_target.GetValue())))
+        self._instructor.SetValue(bool(values.get("instructor_mode", self._instructor.GetValue())))
+        name = self._profile_labels[index]
+        announce(self, i18n.t("profile_applied").format(name=name))
         wx.CallAfter(self.frame.apply_theme, True)
 
     def focus_edit_box(self) -> bool:
@@ -447,11 +545,21 @@ class SettingsPanel(BasePanel):
         s.set("sound_enabled", self._sound.GetValue())
         s.set("speech_enabled", self._speech.GetValue())
         s.set("guidance_enabled", self._guidance.GetValue())
+        s.set("encouragement_enabled", self._encouragement.GetValue())
+        s.set("announce_symbols", self._announce_symbols.GetValue())
+        s.set("welcome_tune_enabled", self._welcome_tune.GetValue())
+        s.set("welcome_speech_enabled", self._welcome_speech.GetValue())
         s.set("volume", float(self._volume.GetValue()))
         s.set("speech_rate", float(self._rate.GetValue()))
+        s.set("line_spacing", float(self._line_spacing.GetValue()))
         s.set("guided_mode", self._guided.GetValue())
         s.set("show_large_target", self._large_target.GetValue())
         s.set("mastery_threshold", float(self._mastery.GetValue()))
+        # فئة المستخدم ووضع المدرب.
+        p_index = self._profile.GetSelection()
+        if p_index >= 0:
+            s.set("user_profile", self._profile_keys[p_index])
+        s.set("instructor_mode", self._instructor.GetValue())
         language = "en" if self._language.GetSelection() == 1 else "ar"
         s.set("interface_language", language)
 
@@ -561,6 +669,82 @@ class InstructorPanel(BasePanel):
 
 
 # ----------------------------------------------------------------------
+# دليل الحروف والأرقام
+# ----------------------------------------------------------------------
+class AlphabetPanel(BasePanel):
+    """استعراض كل الحروف والأرقام مع نطقها من داخل التطبيق.
+
+    مطلب من المراجعة: نطق الحروف والأرقام بأصوات من داخل التطبيق. هنا يمكن
+    للمتعلّم (خاصة الكفيف) أن يتصفّح كل رمز ويسمع نطقه، مع ظهور نمط برايل
+    ونقاطه، دون أن يفشي ذلك إجابة أي اختبار.
+    """
+
+    def activate(self, **kwargs) -> None:
+        clear_sizer(self.content)
+        from braille_go.core.symbols import SymbolCategory
+
+        self.content.Add(W.heading(self, i18n.t("alphabet_guide"), self.theme), 0, wx.ALL, 8)
+        self.content.Add(W.wrapped_text(self, i18n.t("alphabet_desc")), 0, wx.EXPAND | wx.ALL, 8)
+
+        sections = (
+            (i18n.t("letters_ar"), SymbolCategory.LETTER_AR),
+            (i18n.t("letters_en"), SymbolCategory.LETTER_EN),
+            (i18n.t("digits_section"), SymbolCategory.DIGIT),
+        )
+        for title, category in sections:
+            symbols = self.context.repository.by_category(category)
+            if not symbols:
+                continue
+            panel, sizer = W.card(self, self.content, title)
+            grid = wx.GridSizer(cols=6, hgap=4, vgap=4)
+            for symbol in symbols:
+                grid.Add(self._symbol_button(panel, symbol), 0, wx.EXPAND)
+            sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 4)
+
+        self.content.AddStretchSpacer(1)
+        self.finish_layout()
+
+    def _symbol_button(self, parent: wx.Window, symbol) -> wx.Button:
+        name = symbol.name_ar if i18n.get_lang() == "ar" else (symbol.name_en or symbol.name_ar)
+        label = f"{symbol.char} ({name})"
+        button = W.action_button(
+            parent,
+            label,
+            name=label,
+            tooltip=i18n.t("speak_symbol"),
+            on_click=lambda s=symbol, n=name: self._play(s, n),
+        )
+        return button
+
+    #: أسماء الأرقام للنطق الواضح (من داخل التطبيق).
+    _DIGIT_WORDS_AR = {
+        "0": "صفر", "1": "واحد", "2": "اثنان", "3": "ثلاثة", "4": "أربعة",
+        "5": "خمسة", "6": "ستة", "7": "سبعة", "8": "ثمانية", "9": "تسعة",
+    }
+    _DIGIT_WORDS_EN = {
+        "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four",
+        "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine",
+    }
+
+    def _play(self, symbol, name: str) -> None:
+        self.context.sounds.click()
+        is_digit = symbol.category.name == "DIGIT"
+        if is_digit:
+            if symbol.language == "en":
+                word = self._DIGIT_WORDS_EN.get(symbol.char, symbol.name_ar)
+                text = f"number {word}"
+            else:
+                word = self._DIGIT_WORDS_AR.get(symbol.char, symbol.name_ar)
+                text = f"رقم {word}"
+        elif symbol.language == "en":
+            text = symbol.char
+        else:
+            text = f"حرف {symbol.char}"
+        self.context.speak(text, symbol.language)
+        announce(self, i18n.t("symbol_played").format(name=name))
+
+
+# ----------------------------------------------------------------------
 # المساعدة
 # ----------------------------------------------------------------------
 class HelpPanel(BasePanel):
@@ -579,7 +763,7 @@ class HelpPanel(BasePanel):
             "1. ابدأ من الدروس والمستويات ثم اختر أول درس.\n"
             "2. اقرأ نص السؤال داخل صندوق الكتابة (يمكنك الرجوع إليه بـ Ctrl+E).\n"
             "3. أجِب: اختر خيارًا، أو اكتب في حقل الإجابة، أو حدّد النقاط بالأرقام 1-6.\n"
-            "4. اضغط Ctrl+Enter للتأكيد، ثم Ctrl+N للسؤال التالي.\n"
+            "4. اضغط مفتاح الإدخال (Enter) للتأكيد، ثم Enter مرة أخرى للسؤال التالي.\n"
             "5. يُفتح المستوى التالي بعد تحقيق نسبة الإتقان المطلوبة.",
         ), 0, wx.EXPAND | wx.ALL, 4)
 
@@ -601,7 +785,7 @@ class HelpPanel(BasePanel):
 #: (الاختصار، الوصف) لعرضها في شاشة الاختصارات وفي القوائم.
 SHORTCUTS: tuple[tuple[str, str], ...] = (
     ("Ctrl+E", "الانتقال إلى مربع السؤال/الإجابة"),
-    ("Ctrl+Enter / Enter", "تأكيد الإجابة"),
+    ("Enter", "تأكيد الإجابة ثم الانتقال للسؤال التالي"),
     ("Ctrl+N", "السؤال التالي"),
     ("Ctrl+R", "إعادة النطق"),
     ("Ctrl+1 … Ctrl+6", "تبديل النقطة 1 إلى 6 داخل خلية برايل"),
@@ -612,6 +796,7 @@ SHORTCUTS: tuple[tuple[str, str], ...] = (
     ("Ctrl+= / Ctrl+-", "تكبير/تصغير الخط"),
     ("Ctrl+H", "الشاشة الرئيسية"),
     ("Ctrl+L", "الدروس والمستويات"),
+    ("Ctrl+Shift+A", "دليل الحروف والأرقام (النطق)"),
     ("Ctrl+T", "التدريب"),
     ("Ctrl+X", "الاختبارات"),
     ("Ctrl+W", "مراجعة الأخطاء"),

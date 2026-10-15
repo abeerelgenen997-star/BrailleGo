@@ -14,6 +14,7 @@ from . import theme as theme_mod
 from .context import WxAppContext
 from .lesson_view import LessonPanel
 from .screens import (
+    AlphabetPanel,
     ExamsPanel,
     HelpPanel,
     HomePanel,
@@ -93,6 +94,7 @@ class MainFrame(wx.Frame):
             "welcome": WelcomePanel,
             "home": HomePanel,
             "lessons": LessonsPanel,
+            "alphabet": AlphabetPanel,
             "lesson": LessonPanel,
             "practice": PracticePanel,
             "exams": ExamsPanel,
@@ -124,6 +126,7 @@ class MainFrame(wx.Frame):
         learn_items = [
             ("home", i18n.t("app_name"), "Ctrl+H"),
             ("lessons", i18n.t("lessons_levels"), "Ctrl+L"),
+            ("alphabet", i18n.t("alphabet_guide"), "Ctrl+Shift+A"),
             ("practice", i18n.t("practice"), "Ctrl+T"),
             ("exams", i18n.t("exams"), "Ctrl+X"),
             ("review", i18n.t("review_errors"), "Ctrl+W"),
@@ -189,7 +192,6 @@ class MainFrame(wx.Frame):
         e = wx.AcceleratorEntry
         entries = [
             e(wx.ACCEL_CTRL, ord("E"), self.ID_FOCUS_QUESTION),
-            e(wx.ACCEL_CTRL, wx.WXK_RETURN, self.ID_CONFIRM),
             e(wx.ACCEL_CTRL, ord("N"), self.ID_NEXT),
             e(wx.ACCEL_CTRL, ord("R"), self.ID_REPEAT),
             e(wx.ACCEL_CTRL, wx.WXK_DELETE, self.ID_CLEAR),
@@ -227,6 +229,23 @@ class MainFrame(wx.Frame):
                 id=self.ID_NAV_ALT[index],
             )
         self.Bind(wx.EVT_CLOSE, self._on_close)
+        # مفتاح الإدخال (Enter) للتأكيد والانتقال — على مستوى الإطار ليعمل مع
+        # مختلف عناصر الشاشة، تنفيذًا لتعليمات المراجعة (Enter بدل Ctrl+Enter).
+        self.Bind(wx.EVT_CHAR_HOOK, self._on_char_hook)
+
+    def _on_char_hook(self, event) -> None:
+        """اعتراض مفتاح الإدخال (Enter) وتوجيهه إلى الشاشة الحالية."""
+        code = event.GetKeyCode()
+        if code in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER) and not event.ControlDown() and not event.AltDown():
+            panel = self.current_panel
+            method = getattr(panel, "on_enter", None)
+            if callable(method):
+                try:
+                    if method():
+                        return  # تمّت المعالجة، لا تُمرّر الحدث.
+                except Exception:
+                    pass
+        event.Skip()
 
     # ------------------------------------------------------------------
     # التنقّل
